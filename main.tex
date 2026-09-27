@@ -51,27 +51,22 @@
 
 \begin{document}
 
-% --- Dedicated Title Page ---
+% --- Title and Abstract Page ---
 \twocolumn[{
-  \vspace*{2em}
   \maketitle
+  \begin{center}
+    \begin{minipage}{0.92\textwidth}
+      \begin{center}
+        \textbf{Abstract}
+      \end{center}
+      \small
+      A fundamental obstacle in quantum neural networks (QNNs) involves the inherent conflict between model expressiveness and optimization feasibility. Highly expressive architectures, exemplified by the hardware-efficient ansatz, encounter the challenge of barren plateaus (characterized by exponentially diminishing gradients) stemming from unrestricted dynamical Lie algebras (DLAs). Conversely, rigorously equivariant designs preserve gradient stability by restricting operations to symmetry-respecting commutants, but they lack the capacity to represent symmetry-broken target states. To resolve this fundamental tension, the Analytic Perturbation (AP) method is proposed as a systematic framework enabling controlled, incremental symmetry relaxation. The AP method employs an adjustable interpolation coefficient, $\beta \in [0, 1]$, to smoothly integrate symmetry-preserving and symmetry-violating generators. Theoretical analysis demonstrates that although the limiting DLA dimension typically exhibits discontinuous rank growth, the finite-depth circuit varies analytically with respect to $\beta$, and the observed gradient statistics maintain continuity. Numerical statevector simulations of the Transverse-Field Ising Model at scales extending to $16$ qubits reveal a critical minimal structural perturbation that varies as a function of system size. Notably, at $n=16$, modest symmetry breaking ($\beta=0.1$) proves unreliable despite preserving considerable gradient variance, while performance becomes robust across the extended interval $\beta \in [0.2, 1.0]$. This observation indicates that effective scaling necessitates surpassing a particular symmetry-breaking threshold rather than optimizing a hyperparameter within a constrained interval. In conclusion, these results establish the AP method as a theoretically motivated strategy for optimizing finite-depth quantum circuits, while deferring the rigorous establishment of a scale-dependent trainability criterion to subsequent research endeavors.
+      
+      \vspace{1em}
+      \textbf{Keywords:} Quantum Machine Learning, Barren Plateaus, Symmetry Relaxation, Parameterized Quantum Circuits, Dynamical Lie Algebras
+    \end{minipage}
+  \end{center}
   \vspace{2em}
-}]
-\clearpage
-
-% --- Abstract on Next Page ---
-\twocolumn[{
-\vspace*{1em}
-\noindent\hfill
-\begin{minipage}{0.92\textwidth}
-\begin{center}
-\textbf{Abstract}
-\end{center}
-\small
-A fundamental obstacle in quantum neural networks (QNNs) involves the inherent conflict between model expressiveness and optimization feasibility. Highly expressive architectures, exemplified by the hardware-efficient ansatz, encounter the challenge of barren plateaus (characterized by exponentially diminishing gradients) stemming from unrestricted dynamical Lie algebras (DLAs). Conversely, rigorously equivariant designs preserve gradient stability by restricting operations to symmetry-respecting commutants, but they lack the capacity to represent symmetry-broken target states. To resolve this fundamental tension, the Analytic Perturbation (AP) method is proposed as a systematic framework enabling controlled, incremental symmetry relaxation. The AP method employs an adjustable interpolation coefficient, $\beta \in [0, 1]$, to smoothly integrate symmetry-preserving and symmetry-violating generators. Theoretical analysis demonstrates that although the limiting DLA dimension typically exhibits discontinuous rank growth, the finite-depth circuit varies analytically with respect to $\beta$, and the observed gradient statistics maintain continuity. Numerical statevector simulations of the Transverse-Field Ising Model at scales extending to $16$ qubits reveal a critical minimal structural perturbation that varies as a function of system size. Notably, at $n=16$, modest symmetry breaking ($\beta=0.1$) proves unreliable despite preserving considerable gradient variance, while performance becomes robust across the extended interval $\beta \in [0.2, 1.0]$. This observation indicates that effective scaling necessitates surpassing a particular symmetry-breaking threshold rather than optimizing a hyperparameter within a constrained interval. In conclusion, these results establish the AP method as a theoretically motivated strategy for optimizing finite-depth quantum circuits, while deferring the rigorous establishment of a scale-dependent trainability criterion to subsequent research endeavors.
-\end{minipage}
-\hfill\mbox{}\par
-\vspace{1em}
 }]
 
 \section{Introduction}
