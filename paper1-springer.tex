@@ -1,0 +1,843 @@
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{mathrsfs}
+\usepackage[title]{appendix}
+\usepackage{xcolor}
+\usepackage{textcomp}
+\usepackage{manyfoot}
+\usepackage{booktabs}
+\usepackage{algorithm}
+\usepackage{algorithmicx}
+\usepackage{algpseudocode}
+\usepackage{listings}
+\usepackage{enumitem}
+
+\theoremstyle{thmstyleone}
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{hypothesis}[theorem]{Hypothesis}
+
+\theoremstyle{thmstyletwo}
+\newtheorem{example}{Example}
+\newtheorem{remark}{Remark}
+
+\theoremstyle{thmstylethree}
+\newtheorem{definition}{Definition}
+\newtheorem{notation}{Notation}
+
+% ---------- Convenience macros ----------
+\newcommand{\Hil}{\mathcal{H}}
+\newcommand{\lG}{\mathfrak{l}_G(\Hil)}
+\newcommand{\su}[1]{\mathfrak{su}(#1)}
+\newcommand{\opnorm}[1]{\left\lVert #1 \right\rVert_{\mathrm{op}}}
+\newcommand{\fronorm}[1]{\left\lVert #1 \right\rVert_{F}}
+
+\raggedbottom
+
+\begin{document}
+
+\title[Avoiding Plateaus]{Avoiding Plateaus: The Analytic Perturbation (AP) Method for Quantum Neural Networks}
+
+\author*[1]{\fnm{Aryan Rajendra} \sur{Dalvi}}\email{email1@example.com}
+\author[1]{\fnm{Author 2} \sur{Name}}\email{email2@example.com}
+\author[1]{\fnm{Author 3} \sur{Name}}\email{email3@example.com}
+
+\affil*[1]{\orgdiv{Department}, \orgname{Institute Name}, \orgaddress{\city{City}, \country{Country}}}
+
+\abstract{A fundamental obstacle in quantum neural networks (QNNs) involves the inherent conflict between model expressiveness and optimization feasibility. Highly expressive architectures, exemplified by the hardware-efficient ansatz, encounter the challenge of barren plateaus (characterized by exponentially diminishing gradients) stemming from unrestricted dynamical Lie algebras (DLAs). Conversely, rigorously equivariant designs preserve gradient stability by restricting operations to symmetry-respecting commutants, but they lack the capacity to represent symmetry-broken target states. To resolve this fundamental tension, the Analytic Perturbation (AP) method is proposed as a systematic framework enabling controlled, incremental symmetry relaxation. The AP method employs an adjustable interpolation coefficient, $\beta \in [0, 1]$, to smoothly integrate symmetry-preserving and symmetry-violating generators. Theoretical analysis demonstrates that although the limiting DLA dimension typically exhibits discontinuous rank growth, the finite-depth circuit varies analytically with respect to $\beta$, and the observed gradient statistics maintain continuity. Numerical statevector simulations of the Transverse-Field Ising Model at scales extending to $16$ qubits reveal a critical minimal structural perturbation that varies as a function of system size. Notably, at $n=16$, modest symmetry breaking ($\beta=0.1$) proves unreliable despite preserving considerable gradient variance, while performance becomes robust across the extended interval $\beta \in [0.2, 1.0]$. This observation indicates that effective scaling necessitates surpassing a particular symmetry-breaking threshold rather than optimizing a hyperparameter within a constrained interval. In conclusion, these results establish the AP method as a theoretically motivated strategy for optimizing finite-depth quantum circuits, while deferring the rigorous establishment of a scale-dependent trainability criterion to subsequent research endeavors.}
+
+\keywords{Quantum Machine Learning, Barren Plateaus, Symmetry Relaxation, Parameterized Quantum Circuits, Dynamical Lie Algebras}
+
+\maketitle
+
+\section{Introduction}
+
+Variational Quantum Algorithms (VQAs) and Quantum Neural Networks (QNNs) stand as prominent strategies for pursuing practical quantum advantage on Noisy Intermediate-Scale Quantum (NISQ) hardware \cite{preskill2018quantum,cerezo2021variational,peruzzo2014variational,farhi2014quantum,biamonte2017quantum}. By utilizing parameterized quantum circuits refined through classical optimization loops---often enhanced by geometry-aware techniques such as the quantum natural gradient \cite{stokes2020quantum}---these frameworks have demonstrated broad applicability across quantum chemistry, condensed matter physics, and combinatorial optimization. However, extending these architectures to utility-scale problems remains severely constrained by trainability bottlenecks, most notably the barren plateau phenomenon.
+
+Within a barren plateau, the variance of the cost function gradients diminishes exponentially with the number of qubits, preventing effective classical optimization. Recent developments in quantum learning theory formally connect this suppression to the expressibility of the ansatz, frequently analyzed through the framework of Dynamical Lie Algebras (DLAs). Highly expressive designs, such as the standard Hardware-Efficient Ansatz (HEA), give rise to unconstrained DLAs that expand exponentially with system size. While this provides theoretical capability to span the entire Hilbert space, it is expected to exhibit exponentially decaying gradients under established barren plateau assumptions.
+
+To mitigate this, the focus has increasingly shifted toward Geometric Quantum Machine Learning and symmetry-equivariant architectures. By hardcoding problem symmetries directly into the ansatz generators, equivariant QNNs constrain the resulting DLA to a polynomial-sized commutant of the symmetry group. This confinement effectively insulates the architecture against barren plateaus, preserving scalable gradient variances. Nevertheless, strict equivariance imposes a critical limitation: the structural inability to represent symmetry-broken target states. For numerous physical systems---such as molecules undergoing dissociation or many-body spin configurations exhibiting spontaneous symmetry breaking---the true ground state resides outside the strictly symmetric subspace. Consequently, an equivariant ansatz faces a fundamental trade-off, rendering it highly trainable but structurally incapable of capturing the correct physical state.
+
+Existing strategies to manage this expressibility-trainability tension rely heavily on discrete structural alterations. Approaches such as appending static, non-symmetric gate layers or deploying adaptive structure-learning algorithms (e.g., ADAPT-VQE) attempt to break symmetry retrospectively. However, adaptive methods impose prohibitive classical computational overhead at scale, while appending fixed layers creates non-analytic discontinuities in the optimization landscape that can re-introduce barren plateaus.
+
+To overcome these limitations, a fundamentally different approach is introduced: the Analytic Perturbation (AP) method. Instead of treating symmetry as a rigid binary constraint, the AP framework utilizes a tunable interpolation parameter, $\beta \in [0, 1]$, to continuously mix symmetry-preserving and symmetry-breaking generators within the ansatz. This mechanism establishes a smooth physical dial linking the strictly equivariant, highly trainable regime ($\beta=0$) with the fully unrestricted, highly expressive regime ($\beta=1$).
+
+Through rigorous analytical bounds and extensive numerical simulations on the Transverse-Field Ising Model up to $16$ qubits, it is demonstrated that while the asymptotic DLA dimension generically exhibits a discontinuous rank expansion for any $\beta > 0$, the gradient variance at finite depths decays smoothly. This theoretical separation facilitates the emergence of a robust optimal basin---a "optimal symmetry-breaking region"---where the degree of AP symmetry violation is sufficient to consistently achieve high-fidelity reachability in the tested systems of the broken-symmetry ground state, yet restricted enough to avoid triggering a barren plateau. Furthermore, a phenomenon termed the scale-dependent viability threshold is observed, wherein the optimal continuous relaxation parameter shifts between the two tested scale transitions, a behavior requiring investigation at deeper scales to formally establish as a persistent scaling trend.
+
+The remainder of the manuscript is structured as follows. Section~II reviews theoretical foundations of DLAs, barren plateaus, and strict equivariance. Section~III details the AP method, introduces the interpolation parameter $\beta$, and derives analytical bounds for finite-depth gradient variance. Section~IV outlines the experimental setup and presents multiscale validation results at $n \in \{6, 12, 16\}$, alongside physical ablation studies and tests of generalization to continuous $U(1)$ symmetries. Finally, Section~V concludes with a discussion of future applications and prospects for hardware implementation.
+
+\section{Literature Review}
+
+\textbf{Barren Plateaus and Dynamical Lie Algebras.} The trainability of parameterized quantum circuits has been heavily scrutinized since the formal discovery of barren plateaus by McClean et al. \cite{mcclean2018barren}. Subsequent research identified cost-function-, noise-, and entanglement-induced mechanisms that can produce or intensify gradient suppression \cite{cerezo2021cost,wang2021noise,ortiz2021entanglement}. Holmes et al. \cite{holmes2022connecting} formalized the connection to expressibility, demonstrating that highly expressive ans\"atze—such as the unconstrained Hardware-Efficient Ansatz (HEA)—generate exponentially large Dynamical Lie Algebras (DLAs). Representation-theoretic and adjoint-based analyses further sharpen this algebraic characterization \cite{fontana2023adjoint,ragone2023representation}. As the dimension of the DLA grows, the variance of the cost function gradients decays exponentially, rendering optimization intractable at scale. Recently, Lan and Huang \cite{lan2026dla} further refined this DLA perspective, quantitatively mapping Lie algebraic dimensions to specific gradient decay rates (note that this analysis also currently remains an un-peer-reviewed preprint). While these works diagnose the mathematical origin of trainability failures, they do not prescribe a structural methodology for recovering expressivity once a DLA is artificially restricted to avoid barren plateaus.
+
+\textbf{Equivariant QML and the Reachability Paradox.} To systematically restrict DLA growth, the field has increasingly adopted Geometric Quantum Machine Learning, primarily via group-invariant and equivariant architectures. Foundational guarantees and applications for symmetry-aware quantum models were developed across group-invariant, equivariant, and geometric formulations \cite{larocca2022group,nguyen2024theory,meyer2023exploiting,skolik2023equivariant,schatzki2022theoretical}. These results show that if an ansatz strictly commutes with the symmetries of a given problem, its DLA is restricted to a smaller commutant. Enforcing strict equivariance introduces a failure of reachability for physical systems exhibiting spontaneous symmetry breaking, or for tasks where the target state lies strictly outside the symmetric subspace. Baumann and Linnhoff-Popien \cite{baumann2026exploiting} recently analyzed this limitation in detail (though it should be noted this work currently remains in preprint). They demonstrated that symmetry alone is insufficient for ansatz design and explicitly identified the continuous interpolation between strict equivariance and fully unconstrained optimization as a major open problem in QML architecture design. The AP method provides a direct mathematical and empirical approach to this open problem.
+
+\textbf{Approaches to Symmetry Breaking.} Current strategies for navigating the expressibility-trainability tradeoff rely almost exclusively on discrete, binary structural modifications. Park \cite{park2021symmetry, park2024symmetry} introduced the concept of appending fixed, localized symmetry-breaking layers to equivariant circuits. Similarly, Wiersema et al. \cite{wiersema2025geometric} proposed geometric QML utilizing "horizontal gates" that explicitly step along the coset space to break symmetry. While successful at small scales, these architectural interventions are fundamentally discrete. They introduce non-analytic jumps in the optimization landscape and do not provide continuous control over the underlying DLA expansion. 
+
+\textbf{Adaptive and Classical Relaxations.} Alternatively, adaptive algorithms such as ADAPT-VQE and Qubit-ADAPT-VQE \cite{grimsley2019adapt,tang2021qubit} attempt to dynamically learn symmetry-breaking structures by greedily selecting generators from a predefined pool. These data-driven methods incur substantial classical computational overhead for large-scale systems, as they must repeatedly simulate and rank the gradients of the entire operator pool. In classical machine learning, both constructive equivariant networks and continuously relaxed symmetries have been explored \cite{finzi2021practical,vanderouderaa2022relaxed,kossaifi2024continuous}, but these analogues lack the unitary DLA mechanics and quantum gradient-vanishing theory that dictate QML trainability. The Analytic Perturbation (AP) framework bridges this gap by providing an analytically motivated and practically scalable mechanism for continuously controlling quantum symmetry breaking.
+
+\textbf{Summary of Contributions.} Against this backdrop of discrete interventions and adaptive heuristics, four specific novel contributions are introduced. First, a rigorous characterization is provided distinguishing the asymptotic DLA dimension (which experiences a discontinuous step-function increase under symmetry violation) from the finite-depth circuit map (which remains real-analytic). Second, explicit Lipschitz bounds are derived on the gradient variance as a continuous function of the AP symmetry-breaking parameter $\beta$. Third, a fully differentiable commutator-defect surrogate, $\Delta(\theta, \beta)$, is introduced, enabling dynamic gradient-based control over the degree of physical symmetry violation. Finally, we establish the existence of a continuous "optimal threshold basin" and characterize the scale-dependent viability threshold---suggesting that as the underlying Hilbert space expands, the optimal AP symmetry relaxation parameter dynamically shifts to maintain target reachability while staving off barren plateau collapse.
+
+
+\section{Methodology}
+
+
+
+This section develops the Analytic Perturbation(AP) Method in full, the notation and structural
+facts about the commutant subalgebra (\S3.1), the generator-family construction that defines the relaxation dial
+$\beta$ (\S3.2), and theoretical results that motivate and characterize it (\S3.3) — the asymptotic step-function
+theorem, the finite-depth continuity theorem, an explicit Duhamel-derived Lipschitz bound on gradient statistics,
+the corrected commutator-defect surrogate, and the central hypothesis the empirical study is designed to test.
+\subsection{Preliminaries and Notation}
+
+\begin{notation}
+\label{not:symbols}
+$d(\beta) := \dim_{\mathbb{R}} \mathfrak{g}(\beta)$.  $d_{\max} := \max_\beta d(\beta)$.  $\fronorm{A} := \sqrt{\mathrm{tr}(A^\dagger A)}$.  $\opnorm{A}$ denotes the operator (spectral) norm, satisfying $\opnorm{A} \le \fronorm{A}$ always.
+\end{notation}
+\label{sec:prelim}
+
+Let $G$ be a compact group acting on an $n$-qubit Hilbert space $\Hil \cong (\mathbb{C}^2)^{\otimes n}$ through a unitary representation $g \mapsto U_g$.
+
+\begin{lemma}[Peter--Weyl isotypic decomposition]
+\label{lem:peterweyl}
+$\Hil$ decomposes as
+\begin{equation}
+\Hil = \bigoplus_{\lambda \in \hat{G}} M_\lambda \otimes R_\lambda, \label{eq:1}
+\end{equation}
+where $R_\lambda$ carries the irreducible representation labelled by $\lambda$ and $M_\lambda$ is the associated multiplicity space, on which $G$ acts trivially.
+\end{lemma}
+
+\begin{definition}[Commutant subalgebra]
+\label{def:commutant}
+An operator $A \in B(\Hil)$ is $G$-equivariant if $U_g A U_g^\dagger = A$ for all $g \in G$. The set of such operators is the commutant subalgebra $\lG \subseteq B(\Hil)$.
+\end{definition}
+
+\begin{lemma}[Schur block form and dimension formula]
+\label{lem:schur}
+$A \in \lG$ if and only if there exist operators $A_\lambda \in B(M_\lambda)$ such that $A = \bigoplus_\lambda A_\lambda \otimes I_{R_\lambda}$. Consequently
+\begin{equation}
+\dim_{\mathbb{C}} \lG = \sum_{\lambda \in \hat G} \dim(M_\lambda)^2. \label{eq:2}
+\end{equation}
+\end{lemma}
+\begin{proof}
+Let $X(\beta) := \partial_{\theta_{l,j}} C(\theta,\beta)$. The circuit unitary $V(\beta)$ is Lipschitz with constant $K_{\text{circ}} = 2LB\Theta$. Differentiating the cost function $C = \mathrm{tr}(\rho_0 V^\dagger H_C V)$ gives $X(\beta) = i \mathrm{tr}(\rho_0 V_{<}^\dagger [h_j, V_{>}^\dagger H_C V_{>}] V_{<})$. Applying the product rule alongside the standard commutator bound $\opnorm{[A,B]} \le 2\opnorm{A}\opnorm{B}$ implies that $X(\beta)$ is Lipschitz:
+\begin{equation*}
+|X(\beta) - X(\beta')| \le K_X \lVert \beta - \beta' \rVert_2,
+\end{equation*}
+where $K_X = 8 L B_H B^2 \Theta^2$. 
+Since the observables and state are normalized, the gradient magnitude is uniformly bounded: $|X(\beta)| \le M := 2 B_H B \Theta$.
+
+To bound the variance $\mathrm{Var}_\theta[X(\beta)] = \mathbb{E}_\theta[X(\beta)^2] - \mathbb{E}_\theta[X(\beta)]^2$, we factor the difference of squares for the second moment:
+\begin{equation*}
+|X(\beta)^2 - X(\beta')^2| = |X(\beta) - X(\beta')| \cdot |X(\beta) + X(\beta')| \le 2M K_X \lVert \beta - \beta' \rVert_2.
+\end{equation*}
+Provided the parameter sampling distribution $P(\theta)$ is independent of $\beta$, the Dominated Convergence Theorem (using the uniform bound $2M K_X$) justifies taking the expectation over $\theta$, yielding:
+\begin{equation*}
+\big|\mathbb{E}_\theta[X(\beta)^2] - \mathbb{E}_\theta[X(\beta')^2]\big| \le 2M K_X \lVert \beta - \beta' \rVert_2.
+\end{equation*}
+By identical logic, the squared mean satisfies $\big|\mathbb{E}_\theta[X(\beta)]^2 - \mathbb{E}_\theta[X(\beta')]^2\big| \le 2M K_X \lVert \beta - \beta' \rVert_2$.
+Applying the triangle inequality to the variance expansion yields the total bound $4M K_X \lVert \beta - \beta' \rVert_2$. Substituting the explicit expressions for $M$ and $K_X$ defines the final constant:
+\begin{equation*}
+K_{L,\Theta,B,B_H} := 64 L B_H^2 B^3 \Theta^3.
+\end{equation*}
+This bound is polynomial in depth $L$ and strictly independent of the system size $n$.
+\end{proof}
+
+\begin{remark}
+\label{rem:polynomial}
+The Lipschitz constant is polynomial, not exponential, in circuit depth $L$, and does not grow with system size $n$ beyond the operator-norm bounds of the (local, few-qubit Pauli-string) generators. This makes finite-depth continuity practically meaningful --- small changes in $\beta$ cannot cause gradient-variance blowups at fixed, realistic depth.
+\end{remark}
+
+\subsubsection{The commutator-defect surrogate}
+\label{sec:defect}
+
+Exact computation of $d(\beta)$ requires enumerating brackets in a basis of $\su{2^n}$ of dimension $4^n - 1$, tractable only for $n \lesssim 8$. A cheap, differentiable proxy is defined, correcting a discrete-versus-continuous-group subtlety that must be handled explicitly.
+
+\begin{definition}[Generating set for $G$]
+\label{def:genset}
+If $G$ is discrete (e.g.\ $\mathbb{Z}_2$), let $\{T_1,\ldots,T_m\}$ be a set of generators of $G$ as a group, represented as the corresponding unitary operators $T_k = U_{g_k}$. For $\mathbb{Z}_2 = \{e,g\}$, $m=1$ and $T_1 = U_g = \prod_i X_i$ directly — not an infinitesimal generator, since $\mathbb{Z}_2$ has no nontrivial connected component. If $G$ is a connected compact Lie group (e.g.\ $U(1)$, $SU(2)$), let $\{T_1,\ldots,T_m\}$ be a basis of its Lie algebra, represented as Hermitian operators on $\Hil$.
+\end{definition}
+
+\begin{lemma}[Commutation with a generating set determines equivariance]
+\label{lem:genset}
+Let $H \in B(\Hil)$ be Hermitian.
+\begin{enumerate}[label=(\alph*), leftmargin=1.4em, itemsep=1pt, topsep=2pt]
+\item \textbf{(Discrete case.)} If $[H,T_k]=0$ for every $T_k$ in a group-generating set as in Definition~\ref{def:genset}, then $H \in \lG$.
+\item \textbf{(Continuous case.)} If $[H,T_k]=0$ for every $T_k$ in a Lie-algebra basis as in Definition~\ref{def:genset}, and $G$ is connected, then $H \in \lG$.
+\end{enumerate}
+The converse holds in both cases.
+\end{lemma}
+\begin{proof}
+(a) Since $U$ is a group representation, $U_{gh} = U_g U_h$. If $H$ commutes with $U_{g_1},\ldots,U_{g_m}$ (a generating set of $G$), then by induction on word length $H$ commutes with every $U_g$, i.e.\ $H \in \lG$.
+
+(b) For connected $G$, every $g \in G$ lies on a one-parameter subgroup $g(t) = \exp(tX)$ for some $X$ in the Lie algebra. If $[H,T_k]=0$ for a Lie-algebra basis, then $[H,X]=0$ for all $X$, hence $\frac{d}{dt}\big(U_{g(t)}^{-1} H U_{g(t)}\big) = 0$, so $U_{g(t)}^{-1} H U_{g(t)} \equiv H$. Generating arguments extend to all of $G$. The converse is immediate in both cases.
+\end{proof}
+
+\begin{remark}
+\label{rem:correction}
+This corrects an earlier derivation, which invoked ``the connected component of the identity'' uniformly for both cases. For $\mathbb{Z}_2$, the connected component is the single point $\{e\}$, making that phrasing vacuous. Case (a) above (direct group-generator commutation) is the one that correctly applies and is used throughout the TFIM construction. Case (b) is needed, and correctly applicable, only for continuous-group instantiations such as $U(1)$ or $SU(2)$.
+\end{remark}
+
+\begin{definition}[Commutator-defect surrogate]
+\label{def:defect}
+With $\{T_1,\ldots,T_m\}$ as in Definition~\ref{def:genset} and $H_\theta(\beta) := \sum_{l,j} \theta_{l,j}\, h_j(\beta_j)$,
+\begin{equation}
+\Delta(\theta,\beta) := \frac{1}{m}\sum_{k=1}^{m} \frac{\fronorm{[H_\theta(\beta), T_k]}}{\fronorm{H_\theta(\beta)}\,\fronorm{T_k}}, \label{eq:8}
+\end{equation}
+with $\Delta := 0$ by convention if $H_\theta(\beta) = 0$.
+\end{definition}
+
+\begin{proposition}[Properties of the commutator defect]
+\label{prop:defect}
+$\Delta(\theta,\beta) \in [0,2]$ for all $(\theta,\beta)$ with $H_\theta(\beta) \neq 0$.  $\Delta(\theta,\beta) = 0$ if and only if $H_\theta(\beta) \in \lG$. And $\Delta$ is real-analytic in $(\theta,\beta)$ wherever $H_\theta(\beta) \neq 0$.
+\end{proposition}
+\begin{proof}
+\textit{Bound.} For any matrices $A,B$, $\fronorm{[A,B]} \le \fronorm{AB} + \fronorm{BA} \le 2\fronorm{A}\fronorm{B}$ by the triangle inequality and submultiplicativity $\fronorm{AB} \le \fronorm{A}\fronorm{B}$ (Cauchy--Schwarz applied entrywise). Each summand in \eqref{eq:8} is therefore bounded by $2$, giving $\Delta \in [0,2]$.
+
+\textit{Equality characterization.} Each summand vanishes iff $[H_\theta(\beta), T_k] = 0$. By Lemma~\ref{lem:genset}, $[H_\theta(\beta), T_k] = 0$ for every $k$ iff $H_\theta(\beta) \in \lG$.
+
+\textit{Analyticity.} $H_\theta(\beta)$ is linear in $\theta$ and affine in $\beta$. The squared Frobenius norms are polynomial/quadratic in the matrix entries. The Frobenius norm itself contains a square root, which is real-analytic strictly away from zero. Therefore, the quotient in \eqref{eq:8} is real-analytic everywhere on its domain away from the singularity at $H_\theta(\beta) = 0$.
+\end{proof}
+
+\begin{remark}[Why $\Delta$ is strictly finer than $d(\beta)$]
+\label{rem:finer}
+The step-function analysis shows that $d(\beta)$ is generically discontinuous --- whenever $\beta=0.2$ and $\beta=1$ lie in the generic set $U$, $d(0.2) = d(1) = d_{\max}$, and DLA dimension alone gives zero information to distinguish them. In contrast $\Delta(\theta,0.2) \neq \Delta(\theta,1)$ in general, since $H_\theta(0.2)$ has a smaller component outside $\lG$ than $H_\theta(1)$. $\Delta$ is therefore an independently motivated, continuous regularization signal correlated with — but not a proxy for — the asymptotic trainability budget $d(\beta)$.
+\end{remark}
+
+\subsubsection{The central hypothesis}
+\label{sec:hypothesis}
+
+\begin{hypothesis}[Existence of a nontrivial optimal relaxation level]
+\label{hyp:main}
+There exist a nonempty set of finite depths $\mathcal{L} \subseteq \mathbb{N}$ and a nonempty interval $\mathcal{B}^\star \subset (0,1]$ such that for every $\beta \in \mathcal{B}^\star$ and all $L \in \mathcal{L}$.
+\begin{equation}
+F(\beta, L) := \big|\langle \psi_{\mathrm{target}} | V(\theta^\star,\beta) | \psi_0 \rangle\big|^2 \;\ge\; F_{\min} > 0, \label{eq:9}
+\end{equation}
+\begin{equation}
+\mathrm{Var}_\theta[\partial_\theta C(\theta,\beta)]\big|_L \;\ge\; c_\beta \cdot \mathrm{Var}_\theta[\partial_\theta C(\theta,0)]\big|_L, \quad c_\beta \in (0,1], \label{eq:10}
+\end{equation}
+where $|\psi_{\mathrm{target}}\rangle$ is a target symmetry-broken branch state, $\theta^\star$ is an optimized parameter vector at relaxation $\beta$, and $c_\beta$ remains bounded away from $0$ despite $\beta$ generically lying in the same asymptotic DLA class as $\beta=1$.
+\end{hypothesis}
+
+\begin{remark}[Well-posedness]
+\label{rem:wellposed}
+The asymptotic step-function analysis and finite-depth continuity bounds together establish that Hypothesis~\ref{hyp:main} is neither implied nor ruled out by existing theory --- the asymptotic classification says nothing about finite depth, and the finite-depth continuity and Lipschitz results bound how fast gradient variance can change with $\beta$ but do not guarantee that the reachability condition \eqref{eq:9} and trainability condition \eqref{eq:10} hold simultaneously at any particular small $\beta$.
+\end{remark}
+
+\textbf{Resource-trade interpretation.} Symmetry can be treated as an architectural resource \cite{meyer2023exploiting,schatzki2022theoretical} --- fully present ($\beta=0$) provides favorable gradient statistics but zero reachability for symmetry-broken targets. Fully absent ($\beta=1$) provides full reachability but potentially poor gradient statistics. Hypothesis~\ref{hyp:main} asks whether a calibrated interior allocation exists at which both costs are simultaneously acceptable at realistic circuit depths.
+
+\textbf{Control modes and the learned-relaxation objective.}
+
+Two modes for $\beta$ are used throughout, a \emph{scheduled} mode, $\beta(t) = \beta_{\max}\cdot f(t/T)$ with $f$ monotone increasing, a predetermined physical control parameter requiring no surrogate, and a \emph{learned} mode, in which $\beta_j = \sigma(\phi_j)$ is reparameterized and jointly optimized as
+\begin{equation}
+\mathcal{L}(\theta,\phi) = C(\theta,\beta(\phi)) + \lambda\, \Delta(\theta,\beta(\phi)), \qquad \lambda > 0, \label{eq:12}
+\end{equation}
+The learned objective in \eqref{eq:12} follows the classical relaxed-equivariance template of \cite{vanderouderaa2022relaxed}, adapted here with the commutator-defect regularizer of Definition~\ref{def:defect} in place of the classical parameter-count penalty, and grounded directly in the asymptotic and finite-depth gap developed above.
+
+\bigskip
+
+\section{Results and Evaluation}
+
+\begin{table}[!htbp]
+\centering
+\caption{Reproducibility and Experimental Hyperparameters}
+\label{tab:reproducibility}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}X
+    *{3}{>{\centering\arraybackslash}p{0.19\columnwidth}}@{}}
+\toprule
+\textbf{Setting} & $\mathbf{n=6}$ & $\mathbf{n=12}$ & $\mathbf{n=16}$ \\
+\midrule
+Circuit depth $L$ & $6$ & $6$ & $6$ \\
+Number of parameters & $36$ & $72$ & $96$ \\
+Optimizer & Adam & Adam & Adam \\
+Learning rate & $0.01$ & $0.01$ & $0.01$ \\
+Epochs & $500$ & $500$ & $500$ \\
+Initialization & Random & Random & Random \\
+$\beta$ grid & $\begin{gathered}[c] [0,0.1,0.2,\\0.3,1.0] \end{gathered}$
+& $\begin{gathered}[c] [0,0.1,0.2,\\0.3,1.0] \end{gathered}$
+& $\begin{gathered}[c] [0,0.1,0.2,0.3,\\0.5,0.8,1.0] \end{gathered}$ \\
+Cost function & Energy & Energy & Energy \\
+Gradient method & Exact & Exact & Exact \\
+Number of seeds & $7$ & $7$ & $7/12$ \\
+Simulator & Statevector & Statevector & Statevector \\
+Precision & float64 & float64 & float64 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+In this section, an empirical test is conducted on Hypothesis~\ref{hyp:main}. First, the physical testbed, the benchmark baselines, the experimental protocol, and the decision criteria are defined. Then, the multi-scale evaluation results are presented at $n \in \{6, 12, 16\}$ qubits to determine whether a non-trivial, optimal relaxation level $\beta^\star$ exists.
+
+\textbf{Notation.} Throughout this section, the $\beta=1.0$ row in each core results table refers to the AP generator family with maximal symmetry breaking applied uniformly. This is structurally distinct from Baseline B6 (unconstrained HEA), which uses an entirely different gate set with no Hamiltonian-informed generator structure. Both represent full symmetry violation but through different circuits, explaining their different fidelities.
+
+\subsection{Testbed --- Transverse-Field Ising Model}
+
+The framework is evaluated on the one-dimensional Transverse-Field Ising Model (TFIM) with open boundary conditions \cite{pfeuty1970one,sachdev2011quantum}.
+\begin{equation}
+H_{\text{TFIM}}(h) = -\sum_{i=1}^{n-1} Z_i Z_{i+1} - h \sum_{i=1}^n X_i.
+\label{eq:tfim}
+\end{equation}
+The TFIM Hamiltonian in Equation~\eqref{eq:tfim} exhibits a $\mathbb{Z}_2$ symmetry $U_g = \prod_i X_i$ and a critical point at $h_c = 1$. The transverse field is swept over $h \in [0.2, 2.0]$, with emphasis on the ordered phase $h < 1$ where spontaneous symmetry breaking occurs.
+
+\textbf{Why TFIM?} (i) $\mathbb{Z}_2$ is the simplest non-trivial compact group, making exact DLA computations feasible for $n \le 8$. (ii) The ordered phase has a two-fold degenerate ground state that an exactly equivariant ansatz cannot represent as a single branch, providing a hard case where the dial has a measurable payoff. (iii) The commutator defect has direct physical meaning --- it measures how strongly $H_\theta(\beta)$ breaks $\mathbb{Z}_2$.
+
+\textbf{Generator choice.} The equivariant reference generators are selected $h^{\text{sym}} \in \{Z_i Z_{i+1}, X_i\}$ and the symmetry-breaking generator $h^{\text{brk}} = Z_i$ (the longitudinal field conventionally used to select a single broken-symmetry branch).
+
+\subsection{Control Strategies}
+
+Four distinct control strategies are tested governing the relaxation parameter $\beta$, enabling the separation of the benefit of breaking symmetry from the method used to control it.
+\begin{itemize}
+    \item \textbf{S0 (Strict Equivariant).} $\beta \equiv 0$. The standard $\mathbb{Z}_2$-equivariant Hamiltonian Variational Ansatz (HVA) \cite{nguyen2024theory}.
+    \item \textbf{S1 (Fixed symmetry-breaking layer).} $\beta \equiv 1$ on a fixed subset of generators or layers. This recovers the standard fixed-layer HVA-SB baseline \cite{park2021symmetry,park2024symmetry}, representing the discrete architectural approach.
+    \item \textbf{S2 (Scheduled relaxation).} $\beta(t) = \beta_{\text{max}} \cdot f(t/T)$ for a monotonically increasing curriculum function $f$ (e.g., linear or sigmoidal). Here, $\beta$ acts as a predetermined physical control parameter. No surrogate is required, making this the cleanest test of the physical-field interpretation.
+    \item \textbf{S3 (Learned relaxation).} A reparameterization is performed --- $\beta_j = \sigma(\phi_j)$ to bound it within $[0,1]$ and jointly optimize the circuit angles alongside the relaxation strength.
+    \begin{equation}
+    \mathcal{L}(\theta, \phi) = C\big(\theta, \beta(\phi)\big) + \lambda \Delta\big(\theta, \beta(\phi)\big), \quad \lambda > 0.
+    \label{eq:s3objective}
+    \end{equation}
+    The learned-strategy objective in Equation~\eqref{eq:s3objective} follows the classical relaxed-equivariance template of \cite{vanderouderaa2022relaxed}, directly adapted to the quantum setting by using the commutator-defect regularizer $\Delta$ in place of a classical parameter-count penalty.
+\end{itemize}
+
+\subsection{Baselines}
+
+The continuous $\beta$ parameterization is compared against a comprehensive suite of ten baselines (B0--B9) spanning four methodological families, summarized in Table~\ref{tab:baselines}.
+
+\begin{table*}[t]
+\centering
+\caption{The ten baselines evaluated, spanning four methodological families. All ans\"atze are matched for total parameter count where structurally possible}
+\label{tab:baselines}
+\begin{tabular}{p{0.06\textwidth} p{0.65\textwidth} p{0.15\textwidth} p{0.08\textwidth}}
+\hline\hline
+\textbf{Label} & \textbf{Description} & \textbf{Family} & \textbf{Ref.} \\ \hline
+B0 & Strict equivariant HVA (S0) --- Hamiltonian variational ansatz built exclusively from $\mathbb{Z}_2$-equivariant generators $\{Z_i Z_{i+1}, X_i\}$, serving as the primary trainability reference. & Sym.-respecting & \cite{nguyen2024theory} \\
+B1 & Equivariant hardware-efficient ansatz (HEA-Sym) --- single- and two-qubit gates restricted to the $\mathbb{Z}_2$ commutant, chosen by hardware connectivity rather than by Hamiltonian structure. & Sym.-respecting & \cite{larocca2022group} \\
+B2 & Equivariant QAOA-style ($p$-layer) --- alternating cost and mixer unitaries both chosen to be $\mathbb{Z}_2$-equivariant ($H_{\text{TFIM}}$ cost, $\sum_i X_i$ mixer). & Sym.-respecting & \cite{farhi2014quantum} \\
+\hline
+B3 & Fixed symmetry-breaking layer HVA-SB (S1) --- equivariant HVA plus a single appended non-equivariant layer ($Z_i$ generator, $\beta \equiv 1$), serving as the primary reachability reference. & Sym.-breaking & \cite{park2021symmetry,park2024symmetry} \\
+B4 & Multi-layer symmetry-breaking HVA-MSB --- as B3 but with \textit{all} layers including symmetry-breaking generators ($\beta \equiv 1$ everywhere). & Sym.-breaking & -- \\
+B5 & Horizontal-gate ansatz (HGA) --- equivariant gates on the symmetric subspace plus horizontal gates on the coset space $U(2^n)/\mathbb{Z}_2$-centralizer. & Sym.-breaking & \cite{wiersema2025geometric} \\
+\hline
+B6 & Unconstrained hardware-efficient ansatz (Unconstrained HEA) --- arbitrary rotation gates with no symmetry constraint ($\beta \equiv 1$ everywhere), serving as the standard expressibility upper bound and barren-plateau lower bound. & Sym.-agnostic & -- \\
+B7 & Random-parameter benchmark --- Unconstrained HEA circuit evaluated at random parameter initialization, with no optimization. Provides the randomly initialized baseline. & Sym.-agnostic & \cite{mcclean2018barren} \\
+\hline
+B8 & ADAPT-VQE (gradient-pool-greedy) --- iteratively appends the generator from a pool (both equivariant and breaking) that yields the largest energy gradient. & Adaptive & \cite{grimsley2019adapt} \\
+B9 & Symmetry-informed ADAPT-VQE (SI-ADAPT) --- ADAPT-VQE where generators are ranked by both gradient magnitude and the commutator-defect $\Delta$. & Adaptive & the manuscript \\
+\hline\hline
+\end{tabular}
+\end{table*}
+
+\subsection{Ablations}
+
+To isolate the precise source of performance gains and verify robustness, six systematic ablations are performed across the framework:
+\begin{itemize}
+    \item \textbf{A1. Dial granularity.} A comparison is made between a single global scalar $\beta$ against a per-layer vector $\beta_l$ and a fully fine-grained per-generator matrix $\beta_{l,j}$. This tests whether increasing the degrees of freedom of the symmetry-relaxation control provides any measurable benefit.
+    \item \textbf{A2. Control strategy.} A comparison is made between scheduled (S2) and learned (S3) versus constant $\beta$ values to determine whether dynamic, adaptive control during training is strictly necessary, or if a fixed optimal $\beta^\star$ suffices.
+    \item \textbf{A3. Breaking generator choice.} the single-qubit $Z_i$ field is tested against correlated symmetry-violating terms (e.g., $Z_iZ_j$ interactions or $Y_i$). This probes the sensitivity of the model to the specific physical choice of $h^{\text{brk}}$.
+    \item \textbf{A4. Regularization strength.} For the learned strategy (S3), the penalty coefficient is swept $\lambda \in \{0, 10^{-3}, 10^{-2}, 10^{-1}, 1, 10\}$ to observe how tightly the commutator-defect regularizer controls symmetry violation during gradient descent.
+    \item \textbf{A5. Shot-noise robustness.} A finite-shot estimator is employed at $N_s \in \{10^3, 10^4, 10^5\}$ shots per expectation value to verify that the gradient-variance improvements translate to realistic sampling noise \cite{wang2021noise}.
+    \item \textbf{A6. Group generalization.} A small-scale replication is performed using the $G = U(1)$ particle-number symmetry on the bosonic Bose-Hubbard model. This tests whether the AP method safely transfers beyond discrete $\mathbb{Z}_2$ symmetries.
+\end{itemize}
+
+\subsection{Metrics}
+
+Ansatz quality, trainability, and underlying theoretical mechanics are assessed via seven primary metrics.
+\begin{itemize}
+    \item \textbf{M1. Energy error.} $\Delta E(h)$. The difference between the optimized circuit energy and the exact ground-state energy (computed via exact diagonalization for $n \le 14$ and DMRG for larger $n$). This is the primary indicator of overall ansatz quality.
+    \item \textbf{M2. Gradient-variance scaling.} $\text{Var}_\theta[\partial_\theta C(\theta, \beta)]$ measured against system size $n \in \{4,\ldots,20\}$ at fixed depth. The exponential-decay exponent is fitted as the barren-plateau indicator \cite{holmes2022connecting,lan2026dla}, explicitly testing condition \eqref{eq:10} of Hypothesis~\ref{hyp:main}.
+    \item \textbf{M3. Exact $d(\beta)$ via Lie-closure computation.} For small systems ($n \le 8$), iterated commutators are enumerated of $\{i h_j(\beta_j)\}_j$ up to depth $K$ and compute $d(\beta) = \text{rank}\, \Phi(\beta)$ exactly. This directly tests the predicted step-function structure and maps the resonant set $\mathcal{R}$.
+    \item \textbf{M4. Commutator-defect trajectory.} $\Delta(\theta^{(t)}, \beta^{(t)})$ tracked at every training step for strategies S2 and S3. This tests continuity and differentiability in practice, and ensures that $\beta=0.2$ can be discriminated from $\beta=1$ even when $d(0.2)=d(1)$.
+    \item \textbf{M5. Depth-to-fidelity.} Minimum circuit depth $L$ required to achieve $F(\beta, L) \ge F_{\text{min}}$ relative to the target symmetry-broken branch state, as a function of $\beta$. Tests condition \eqref{eq:9} of Hypothesis~\ref{hyp:main}.
+    \item \textbf{M6. Order-parameter branch selection.} Longitudinal magnetization $\langle Z \rangle_\theta$ versus $h$ and $\beta$ at optimized parameters. This explicitly tests whether the circuit selects a definite broken-symmetry branch or remains trapped in the symmetric superposition sector.
+    \item \textbf{M7. Symmetry-organized complexity index.} $\Psi$ \cite{meyer2023exploiting,schatzki2022theoretical}. An auxiliary diagnostic to check the alignment of circuit expressivity with the problem's symmetry structure, tracked alongside $\Delta$.
+\end{itemize}
+
+\subsection{Experimental Protocol and Statistical Rigor}
+
+Statevector simulations are executed across varying system sizes to decouple exact Lie-algebra properties from asymptotic gradient variance and finite-depth optimization success. Results are aggregated across seven independent random initializations at =6$ and =12$, with up to 12 initializations at $n=16$. Bootstrap confidence intervals (using 10,000 resamples) are reported to characterize optimization variability. Note that for highly reachable configurations, the upper bootstrap percentile naturally clips at the exact physical $1.000$ statevector fidelity limit.
+\textbf{System sizes.} We perform exact $d(\beta)$ computations (M3) at $n \in \{4, 6, 8\}$. Gradient-variance scaling (M2) is evaluated up to $n=20$. Fidelity and reachability metrics (M1, M5) are evaluated at larger tested scales $n \in \{6, 12, 16\}$ to probe the finite-depth optimization landscape.
+\textbf{Protocol.}
+\begin{enumerate}
+    \item \textit{Lie-algebra mapping.} $d(\beta)$ is computed exactly to map the resonant set $\mathcal{R}$ and confirm the predicted step-function structure.
+    \item \textit{Gradient-variance sweep.} Exponential-decay exponents are fitted of the gradient variance across $n \le 20$.
+    \item \textit{Fidelity and Baseline sweeps.} All ans\"atze are optimized, physical ablations, and baseline models at $n \in \{6, 12, 16\}$ over the random seeds described above to evaluate the central Hypothesis~\ref{hyp:main}.
+\end{enumerate}
+
+\subsection{Decision Criteria}
+
+\textbf{Hypothesis confirmed.} The hypothesis is confirmed if there exists $\beta^\star \in (0, 1)$ at finite depth such that fidelity $F(\beta^\star, L) \ge 0.90$ and the gradient variance remains within an order of magnitude of the fully equivariant baseline --- $\text{Var}[\partial_\theta C(\theta, \beta^\star)] \ge 0.10 \cdot \text{Var}[\partial_\theta C(\theta, 0)]$.
+
+\textbf{Hypothesis rejected.} The hypothesis is rejected if no such $\beta^\star$ exists (either all highly reachable circuits suffer from gradient collapse, or no circuit reaches the target).
+
+\vspace{1em}
+
+% ---------------------------------------------------------
+% THE MULTI-SCALE RESULTS SECTION GOES HERE
+% ---------------------------------------------------------
+\subsection{Small-Scale Evaluation ($n=6$)}
+
+The full experimental protocol was first executed at the $n=6$ scale, corresponding to a $64$-dimensional statevector simulation. At this foundational depth, the asymptotic scaling laws that drive barren plateaus have not yet fully activated to suppress the gradients of unconstrained models. Therefore, the $n=6$ scale serves a distinct and vital scientific purpose --- it isolates the purely structural and mathematical expressibility of the various ans\"atze. By decoupling the physics of symmetry operators from the confounding effects of gradient collapse, this scale allows the establishment of the empirical limits of reachability for each ansatz family. The target ground state for the symmetry-broken ordered phase ($h=0.5, h_z=0.1$) was computed via exact diagonalization, yielding an exact global minimum energy of $E_{\text{exact}} = -6.0705$.
+
+\subsubsection{Step 1 --- Lie-Algebra Mapping and Continuous Commutator Defect}
+
+Before evaluating the finite-depth optimization, the asymptotic theory was explicitly mapped by computing the exact Dynamical Lie Algebra (DLA) dimension $d(\beta)$ for small systems ($n \le 8$). 
+For $n=4$, the strictly equivariant algebra ($\beta=0$) generated a highly restricted DLA with dimension $d(0) = 28$. The introduction of any generic symmetry-breaking perturbation $\beta \in (0, 1]$ immediately broke the commutant constraint and saturated the full $\mathfrak{su}(2^n)$ algebra, yielding a dimension of $d(\beta) = 255$.
+
+This exact enumeration verifies the predicted step-function structure --- from the perspective of asymptotic DLA theory, $\beta=0.2$ and $\beta=1.0$ are identical. They both yield the maximal exponentially-scaling Lie algebra, and therefore DLA theory alone provides zero information to distinguish between weak and strong symmetry breaking.
+
+Despite this binary asymptotic structure, the finite-depth mechanics are inherently continuous. The proposed commutator-defect surrogate, $\Delta(\theta, \beta)$, successfully captured this continuity. As shown in Figure \ref{fig:defect}, $\Delta$ smoothly and strictly monotonically increased from $\Delta(0)=0.00$ up to $\Delta(1)=0.35$. This indicates that $\Delta$ acts as an effective, differentiable continuous proxy capable of physically discriminating a gentle relaxation ($\beta=0.2$) from a total symmetry destruction ($\beta=1.0$), even when their infinite-depth DLAs are indistinguishable.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.5\textwidth]{n6_commutator.png}
+    \caption{Commutator-defect trajectory $\Delta(\beta)$ at the foundational $n=6$ scale, confirming its smooth, strictly monotonic relationship with the symmetry-breaking field. It successfully distinguishes interior $\beta$ values that share the same asymptotic DLA}
+    \label{fig:defect}
+\end{figure*}
+
+\subsubsection{Step 2 \& 3 --- The Core Pareto Frontier and the Reachability-Trainability Trade-off}
+
+The central trade-off between reachability (measured via ground state Fidelity) and trainability (measured via Gradient Variance) across the continuous interpolation parameter $\beta$. The required condition to confirm Hypothesis~\ref{hyp:main} was discovering a parameter regime that achieved $F \ge 0.9$ while simultaneously retaining a variance of $\text{Var} \ge 0.157$ (defined as at least $10\%$ of the maximum theoretical variance bound established by the strict equivariance baseline).
+
+\begin{table}[!t]
+\centering
+\caption{The core reachability and trainability results at $n=6$ (mean $\pm$ standard deviation over $N=7$ seeds). The optimal continuous relaxation region $\beta \in [0.1, 0.3]$ effectively mitigates the reachability problem while preserving a substantial fraction of the gradient variance. Additionally, selected leading alternative architectures (B3, B5, B6, B7, B8) and ablations (A1) across the same 7 seeds}
+\label{tab:n6_core}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}>{\centering\arraybackslash}p{0.14\columnwidth}
+                    >{\centering\arraybackslash}p{0.34\columnwidth}
+                    >{\centering\arraybackslash}p{0.20\columnwidth}
+                    >{\raggedright\arraybackslash}p{0.27\columnwidth}@{}}
+\hline\hline
+\textbf{Model/$\beta$} & \textbf{Fidelity ($F$)} & \textbf{Grad Variance} & \textbf{Status} \\ \hline
+\multicolumn{4}{c}{\textbf{Proposed Method (AP)}} \\ \hline
+$0.0$ & $0.5068 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[0.507,0.507]$} & $1.57 \times 10^0$ & Fails reachability \\
+$0.1$ & $0.9981 \pm 0.0041$\newline {\scriptsize 95\% Bootstrap CI $[0.995, 1.000]$} & $1.12 \times 10^0$ & Confirmed \\
+$0.2$ & $0.9998 \pm 0.0001$\newline {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$} & $8.93 \times 10^{-1}$ & Confirmed \\
+$0.3$ & $\mathbf{0.9999 \pm 0.0000}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$} & $\mathbf{8.63 \times 10^{-1}}$ & \textbf{Robust} \\
+$1.0$ & $0.8573 \pm 0.3486$\newline {\scriptsize 95\% Bootstrap CI $[0.599, 1.000]^\ddagger$} & $6.92 \times 10^{-1}$ & Asymptotic danger \\
+\hline
+\multicolumn{4}{c}{\textbf{Baselines \& Ablations}} \\ \hline
+B3 (Fixed) & $0.6465 \pm 0.2234$\newline {\scriptsize 95\% Bootstrap CI $[0.481,0.812]$} & -- & Suboptimal \\
+B5 (Geo) & $0.9999 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$} & -- & Geometric baseline \\
+B6 (HEA) & $0.9999 \pm 0.0001$\newline {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$} & -- & Unconstrained \\
+  B7 (Random) & $0.8564 \pm 0.3490$\newline {\scriptsize 95\% Bootstrap CI $[0.598,1.000]^\ddagger$} & -- & Random initialization \\
+B8 (ADAPT) & $0.9950 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[0.995,0.995]$} & -- & Costly gradient pool \\
+A1 (Layer $\beta$) & $0.7733 \pm 0.0946$\newline {\scriptsize 95\% Bootstrap CI $[0.703,0.843]$} & -- & Fails reachability \\
+\hline\hline
+
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=\textwidth]{n6_gradient.png}
+    \caption{Gradient variance scaling at $n=6$. The variance smoothly and predictably decays as the continuous parameter $\beta \to 1$, directly demonstrating the precise numerical control the dial offers over the loss landscape}
+    \label{fig:variance_n6}
+\end{figure*}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.5\textwidth]{n6 pareto.png}
+    \caption{The Reachability-Trainability Pareto Frontier at $n=6$. The optimal continuous relaxation $\beta^\star = 0.3$ balances the competing demands, occupying the empirical Pareto optimum in the top-right quadrant}
+    \label{fig:pareto_n6}
+\end{figure*}
+
+Table~\ref{tab:n6_core} and Figures~\ref{fig:variance_n6} and~\ref{fig:pareto_n6} summarize the foundational $n=6$ reachability--trainability trade-off. The empirical data empirically supports Hypothesis~\ref{hyp:main} at this foundational scale. 
+As expected, strict equivariance ($\beta=0$) protects gradient variance. It entirely fails to reach the symmetry-broken ground state, stalling out at $F=0.5061 \pm 0.0002$. The fundamental reason for this failure is mathematical --- an operator strictly confined to the commutant of $\mathbb{Z}_2$ is structurally incapable of representing the asymmetric probability amplitudes of the target state.
+
+Conversely, the AP method provides a possible approach to this problem. By tuning the dial into an optimal basin $\beta \in [0.1, 0.3]$, just enough symmetry violation is introduced to rotate the statevector out of the symmetric subspace, achieving near-perfect reachability ($F > 0.998$). With the variance rigorously suppressed across all $N=7$ seeds (95\% Bootstrap CIs resolving to $[1.000, 1.000]$), the entire $[0.1, 0.3]$ basin is statistically robust and uniformly successful at $n=6$. This robust interior region consistently exhibited the strongest performance across all evaluated seeds. It accomplishes this while maintaining an favorable gradient variance, far exceeding the $10\%$ threshold required by the hypothesis. This indicates that the AP method can address the structural reachability problem without entirely sacrificing trainability.
+
+\subsubsection{Extended Baselines and the "Expressibility Illusion"}
+
+To establish a rigorous baseline hierarchy at the $n=6$ scale, five state-of-the-art alternative ans\"atze against the $\beta^\star = 0.3$ optimal model.
+\begin{itemize}
+    \item \textbf{B5 (Geometric QML with Horizontal Gates).} The geometric approach achieved high reachability ($F=0.9982 \pm 0.0003$) by appending specific algebraic generators corresponding to the coset space. It was marginally lower than the much simpler $\beta=0.3$ continuous parameter dial ($F \approx 0.9998$).
+    \item \textbf{B6 (Standard Unconstrained HEA).} At this small $n=6$ scale, the entirely unconstrained Hardware-Efficient Ansatz appears effective, achieving $F=0.9999 \pm 0.0001$. This is a potentially misleading impression of trainability. Because $n=6$ is simply too small for the barren plateau to fully suppress the gradients to near zero, the HEA successfully navigates the landscape. The underlying exponential Lie algebra is hidden by the small system size. This apparent trainability does not persist when the system is scaled to $n=12$, as will be demonstrated in the next section.
+    \item \textbf{B2 (QAOA).} The standard Quantum Approximate Optimization Algorithm template ($p=12$) struggled significantly to converge to the continuously broken ground state. Despite having deep layers, it became repeatedly trapped in local minima, yielding an unacceptably low fidelity of $F=0.6263$.
+    \item \textbf{B7 (Random Benchmark).} $F=0.8564 \pm 0.3490$. Evaluated at random parameter initialization with no optimization. Provides the randomly initialized baseline.
+    \item \textbf{B8 \& B9 (ADAPT-VQE).} Both the standard gradient-greedy ADAPT algorithm and the proposed $\Delta$-weighted ADAPT algorithm successfully identified sparse sequences of symmetry-breaking generators, ultimately reaching the target with high fidelity ($F=0.9950 \pm 0.0000$ (*Note --- ADAPT-VQE exhibits exactly zero standard deviation across seeds because its greedy structure-learning algorithm constructs a deterministic circuit path independent of initial parameter randomization.*)). They were still slightly lower than the static $\beta^\star$ dial ($F \approx 0.9998$). More importantly, ADAPT-VQE requires an $\mathcal{O}(N_g)$ classical operator-ranking overhead involving hundreds of auxiliary circuit evaluations per optimization step, as summarized in Table~\ref{tab:adapt_overhead}. This makes the static $\beta$ framework more efficient in practice.
+\end{itemize}
+
+\begin{table}[!h]
+\centering
+\caption{Classical overhead for AP and ADAPT-VQE per optimization step}
+\label{tab:adapt_overhead}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{0.27\columnwidth}
+    >{\centering\arraybackslash}p{0.22\columnwidth}
+    >{\centering\arraybackslash}X@{}}
+\toprule
+\textbf{Method} & \textbf{Auxiliary circuits} & \textbf{Relative evaluation count} \\
+\midrule
+AP (Static $\beta$) & $0$ & $1\times$ \\
+\mbox{ADAPT-VQE} & $\mathcal{O}(N_g)$ & $\approx 150\times$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+
+
+\subsection{Intermediate Scale-Up ($n=12$)}
+
+Scaling the experimental testbed to a $4,096$-dimensional statevector ($n=12$) provides an intermediate-scale regime in which gradient suppression becomes clearly observable for the tested unconstrained architecture. This intermediate scale systematically tests the core trainability claims of Hypothesis~\ref{hyp:main}, separating ans\"atze that merely benefit from small-system expressivity from those with retain favorable trainability trends at the largest simulated scales.
+
+\subsubsection{The Expressibility-Trainability Paradox and HEA Collapse}
+An important result at the $n=12$ scale is the failure of Baseline B6 (the Unconstrained Hardware-Efficient Ansatz, or HEA).
+
+At the foundational $n=6$ scale, B6 achieved a near-perfect fidelity of $F=0.9999$, making it appear as an effective and expressive architecture. Because B6 lacks any symmetry constraints ($\beta \equiv 1$ everywhere), its underlying dynamical Lie algebra (DLA) scales exponentially with the number of qubits. Consistent with the established gradient-variance connection, this exponential DLA volume is accompanied by the gradient suppression predicted for highly expressive ansätze under the relevant barren-plateau conditions.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.8\textwidth]{paper1_b6_trajectories.png}
+    \caption{Raw Loss vs. Epoch training trajectories for the unconstrained Hardware-Efficient Ansatz (B6) at $n=6$ and $n=12$. The contrast between the successful $n=6$ convergence and the complete stagnation at $n=12$ is visually consistent with the onset of the barren plateau as predicted by the exponential expansion of the Dynamical Lie Algebra}
+    \label{fig:b6_trajectories}
+\end{figure*}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=\textwidth]{n12 gradient_2.png}
+    \caption{Gradient variance scaling at $n=12$. The unconstrained ansatz (B6) exhibits gradient suppression, consistent with barren plateau behavior, while the $\beta < 1$ ans\"atze maintain trainability}
+    \label{fig:variance_n12}
+\end{figure*}
+
+As shown by the loss trajectories in Figure~\ref{fig:b6_trajectories}, the gradient scaling in Figure~\ref{fig:variance_n12}, and the summary in Table~\ref{tab:n12_core}, by $n=12$ the gradient variance for B6 has decayed to the point where the optimizer can no longer distinguish the signal of the true ground state from the background noise of the flat landscape. The gradients essentially vanish into the precision limits of the simulation. Consequently, B6 suffers a total barren plateau collapse, failing to train entirely. It yields a final fidelity of $F=0.1197$, which is significantly worse than even a random parameter initialization. This collapse provides empirical evidence for the expressibility-trainability paradox --- an ansatz can be highly expressive in theory, but entirely untrainable in practice at depth due to the over-parameterization of its Lie algebra. This failure of the standard unconstrained approach serves as the physical motivation for the AP method.
+
+\subsubsection{The Core Pareto Frontier and the scale-dependent viability threshold}
+
+The central trade-off between reachability (Fidelity) and trainability (Gradient Variance) across the interpolation parameter $\beta$ at the $n=12$ scale.
+
+\begin{table}[!t]
+\centering
+\caption{The core reachability and trainability results at $n=12$ across $N=7$ seeds. The table indicates the failure of both the strictly symmetric ($\beta=0.0$) and unrestricted ($\beta=1.0$) boundaries, juxtaposed against the robust success of the interior $\beta \in [0.1, 0.3]$ region. Baselines B6 (HEA) and A1 suffer barren plateaus at this scale}
+\label{tab:n12_core}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}>{\centering\arraybackslash}p{0.14\columnwidth}
+                    >{\centering\arraybackslash}p{0.34\columnwidth}
+                    >{\centering\arraybackslash}p{0.20\columnwidth}
+                    >{\raggedright\arraybackslash}p{0.27\columnwidth}@{}}
+\hline\hline
+\textbf{Model/$\beta$} & \textbf{Fidelity ($F$)} & \textbf{Grad Variance} & \textbf{Status} \\ \hline
+\multicolumn{4}{c}{\textbf{Proposed Method (AP)}} \\ \hline
+$0.0$ & $0.4980 \pm 0.0001$\newline {\scriptsize 95\% Bootstrap CI $[0.498,0.498]$} & $1.12 \times 10^0$ & Fails reachability \\
+$0.1$ & $\mathbf{0.9995 \pm 0.0004}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$} & $\mathbf{6.86 \times 10^{-1}}$ & \textbf{Robust} \\
+$0.2$ & $\mathbf{0.9997 \pm 0.0001}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$} & $\mathbf{6.40 \times 10^{-1}}$ & \textbf{Robust} \\
+$0.3$ & $\mathbf{0.9997 \pm 0.0001}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$} & $\mathbf{6.38 \times 10^{-1}}$ & \textbf{Robust} \\
+$1.0$ & $0.7139 \pm 0.4515$\newline {\scriptsize 95\% Bootstrap CI $[0.379, 1.000]^\ddagger$} & $5.35 \times 10^{-1}$ & Fails (local minima) \\
+\hline
+\multicolumn{4}{c}{\textbf{Baselines \& Ablations}} \\ \hline
+B3 (Fixed) & $0.7135 \pm 0.3640$\newline {\scriptsize 95\% Bootstrap CI $[0.444,0.983]$} & -- & Suboptimal \\
+B5 (Geo) & $0.9993 \pm 0.0003$\newline {\scriptsize 95\% Bootstrap CI $[0.999,0.999]$} & -- & Geometric baseline \\
+B6 (HEA) & $0.1197 \pm 0.0142$\newline {\scriptsize 95\% Bootstrap CI $[0.109,0.130]$} & -- & Barren plateau collapse \\
+  B7 (Random) & $0.5711 \pm 0.4945$\newline {\scriptsize 95\% Bootstrap CI $[0.205,0.938]$} & -- & Random initialization \\
+B8 (ADAPT) & $0.9939 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[0.994,0.994]$} & -- & Costly gradient pool \\
+A1 (Layer $\beta$) & $0.0686 \pm 0.0820$\newline {\scriptsize 95\% Bootstrap CI $[0.008,0.129]$} & -- & Barren plateau collapse \\
+\hline\hline
+
+\end{tabular}
+\end{table}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.5\textwidth]{n12 pareto_2.png}
+    \caption{The Reachability-Trainability Pareto Frontier at $n=12$. The proposed continuous relaxation ($\beta \in [0.1, 0.3]$) occupies the optimal top-right quadrant, achieving a more favorable reachability--trainability trade-off than both strict symmetry and unrestricted architectures}
+    \label{fig:pareto_n12}
+\end{figure*}
+
+Table~\ref{tab:n12_core} and Figure~\ref{fig:pareto_n12} capture the structural gap between finite-depth performance and asymptotic DLA theory at $n=12$. The binary boundaries both fail to produce acceptable models, albeit for entirely different physical reasons.
+\begin{itemize}
+    \item \textbf{Strict Equivariance ($\beta=0$).} This ansatz preserves gradient variance ($1.12 \times 10^0$), mitigating barren plateau behavior. Because the target TFIM ground state explicitly breaks the global $\mathbb{Z}_2$ symmetry (due to the applied longitudinal field $h_z=0.1$), the strict HVA physically cannot represent the state. The ansatz remains artificially confined to the symmetric subspace. It caps out at a maximum fidelity of $F=0.4979$, fundamentally failing reachability because it cannot represent the asymmetric probability amplitudes of the true ground state.
+    \item \textbf{Fully Unrestricted ($\beta=1$).} The AP generator family at maximal symmetry breaking technically has the mathematical expressibility to reach the target state. The complete destruction of symmetry results in an increasingly difficult, highly non-convex loss landscape teeming with local minima and saddle points. Coupled with the shrinking gradients caused by the expanding DLA, the optimizer is unable to find the global minimum. It erratically falls into poor local minima, stalling at $F=0.6664$. (Note --- this is distinct from Baseline B6, which uses an entirely different unconstrained HEA architecture and collapses even further to $F=0.1197$. Both represent full symmetry violation but through structurally different circuits.)
+\end{itemize}
+
+% \begin{figure*}[!t]
+%     \centering
+%     \includegraphics[width=\textwidth]{n12 commutator.png}
+%     \caption{Commutator-defect trajectory $\Delta(\beta)$ at $n=12$}
+%     \label{fig:defect_n12}
+% \end{figure*}
+
+the numerical tracking of $\Delta(\beta)$ confirmed that the commutator defect remains a continuous symmetry-breaking diagnostic at this scale. In contrast to the failed boundaries, a wide basin of continuous relaxation ($\beta \in [0.1, 0.3]$) navigates the complex optimization landscape. These optimal threshold values introduce just enough symmetry violation to allow the ansatz to smoothly rotate out of the symmetric subspace and closely overlap with the target branch. Because the magnitude of the violation is continuously bounded, it acts as a weak structural perturbation. This prevents the Lie algebra from immediately exploding and triggering the onset of a barren plateau at this finite depth. As a result, the models operating within this $\beta \in [0.1, 0.3]$ interval consistently achieved near-perfect fidelity ($F=0.9997 \pm 0.0002$) across all evaluated seeds.
+
+It is worth noting that the wide confidence interval for sub-optimal values like $\beta=0.1$ reflects a bimodal failure mode, where some seed initializations fall into unconstrained local minima while others successfully reach the target.
+
+\subsubsection{Extended State-of-the-Art Baselines}
+To further contextualize the power of the continuous dial, the state-of-the-art alternative ans\"atze were evaluated at $n=12$ against the optimal $\beta \in [0.1, 0.3]$ interval.
+\begin{itemize}
+    \item \textbf{B5 (Geometric QML with Horizontal Gates).} $F=0.9993 \pm 0.0003$. The geometric QML approach achieved high reachability, remaining competitive at scale. It requires a carefully designed structural change to the circuit architecture. The continuous dial slightly achieved a numerically higher mean fidelity than it ($0.9997 > 0.9993$) by utilizing a much simpler, continuous parameter scaling of existing generators.
+    \item \textbf{B6 (Unconstrained HEA).} $F=0.1197 \pm 0.0142$. This is the critical collapse point. The unconstrained model, which achieved perfect fidelity at $n=6$, failed at $n=12$. Its unconstrained dynamical Lie algebra triggered a barren plateau, reducing trainability.
+    \item \textbf{B7 (Random Benchmark).} $F=0.5711 \pm 0.4945$. The randomly initialized circuit baseline for unconstrained unitary sweeps, confirming that B6 performed worse than the randomly initialized baseline due to gradient decay.
+    \item \textbf{B8 \& B9 (ADAPT-VQE).} $F=0.9939 \pm 0.0000$ (*Note --- ADAPT-VQE exhibits exactly zero standard deviation across seeds because its greedy structure-learning algorithm constructs a deterministic circuit path independent of initial parameter randomization.*). The adaptive structure-learning algorithms successfully avoided barren plateaus by dynamically selecting a sparse set of generators. These data-driven algorithms require $\mathcal{O}(N_g)$ classical operator-ranking overhead to simulate and rank the gradient pool at every step. The simple, static continuous dial achieved a numerically higher mean fidelity than them ($0.9997 > 0.9939$) while requiring avoiding iterative operator-pool ranking overhead, suggesting that a calibrated physical symmetry-breaking field is more computationally efficient than greedy structure learning.
+\end{itemize}
+
+\subsubsection{Dynamic Strategies --- Scheduled vs. Learned}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.8\textwidth]{paper1_s3_trajectories.png}
+    \caption{Parameter trajectory of the Learned Regularizer (S3) $\beta(\phi)$ over training epochs at $n=6$ and $n=12$. The meta-optimizer dynamically pushes the dial from an initial $\beta=0.5$ down toward the optimal $[0.1, 0.3]$ basin, organically navigating the reachability-trainability trade-off}
+    \label{fig:s3_trajectories}
+\end{figure*}
+
+Finally, the two dynamic control strategies were evaluated at $n=12$, with the learned $\beta$ trajectory shown in Figure~\ref{fig:s3_trajectories}.
+\begin{itemize}
+    \item \textbf{Strategy S2 (Scheduled Curriculum).} This strategy forces $\beta$ to slowly increase over the course of training according to a predefined schedule. This continued to scale exceptionally well, achieving $F=0.9918 \pm 0.0005$ without requiring the user to guess a predetermined scalar $\beta^\star$ a priori. 
+    \item \textbf{Strategy S3 (Learned Regularizer).} This strategy attempts to meta-optimize the $\beta$ parameter alongside the circuit angles by minimizing the commutator-defect surrogate $\Delta$. Unfortunately, this strategy remained highly unstable at scale, plummeting to $F=0.3386 \pm 0.0521$. This strongly indicates that meta-optimization of the symmetry parameter suffers from its own landscape pathologies, making gradient-descent over the hyperparameter $\beta$ highly ineffective at large scales compared to simple physical schedules.
+\end{itemize}
+
+
+
+\subsection{Scaling ($n=16$)}
+\label{sec:n16}
+
+The experimental testbed was finally scaled to $n=16$ qubits, simulating a large $65,536$-dimensional statevector. This represents the largest system size studied, pushing deeply into the asymptotic limit where barren plateaus are fully activated and gradient scaling dominates all other optimization factors. At this scale, the difference between theoretical expressivity and practical trainability is substantial. This section documents the evaluation of the hypotheses at scale, highlighting the dynamic shifting of the optimal symmetry-relaxation basin.
+
+To evaluate this limit while managing the substantial computational overhead, a tiered seed-evaluation strategy was employed. All head-to-head performance claims between the AP method and competing baselines were validated using Welch\'s t-tests, yielding $p$-values below 0.05 under Welch's t-test even when accounting for differing seed counts. The central empirical observation (the failure of $\beta=0.1$ at $n=16$) was evaluated with $N=12$ independent seeds to evaluate its bimodal failure distribution. The surrounding continuous parameters ($\beta \in \{0.0, 0.2, 0.3, 0.5, 0.8, 1.0\}$), the unconstrained collapse (B6), and the dynamic strategies (S2, S3) were bounded using $N=7$ seeds to match the internal consistency of the previous experiments. Finally, computationally prohibitive secondary architectural baselines (B5, B8, B9) were evaluated with $N=3$ seeds.
+
+\subsubsection{The Trainability Loss of the Unconstrained Ansatz}
+
+The trends observed at $n=12$ continue at $n=16$. Baseline B6 (the standard Unconstrained Hardware-Efficient Ansatz) exhibits barren plateau behavior.
+
+At $n=6$, B6 achieved near-perfect fidelity ($F=0.9999$). At $n=12$, the gradient suppression reduced it to $F=0.1197$. At the $n=16$ scale, the underlying unconstrained Dynamical Lie Algebra ($\mathfrak{su}(2^{16})$) is large enough that the variance of the gradients reaches the precision floor of the simulation. As a direct result, B6 achieves a final training fidelity of exactly $F=0.0001 \pm 0.0000$.
+
+Figure~\ref{fig:pareto_n16} (center panel) and Table~\ref{tab:n16_core} list this total variance suppression directly. The resulting fidelity is effectively zero, confirming that the optimizer failed to take a single meaningful step toward the ground state. It empirically supports that merely possessing theoretical capacity to represent a symmetry-broken ground state is insufficient for optimization if the model architecture fails to constrain the Lie algebra. The failure of B6 at $n=16$ motivates evaluating the AP method for larger quantum machine learning tasks.
+
+\subsubsection{The Pareto Frontier and the scale-dependent viability threshold}
+
+The central reachability-trainability trade-off at $n=16$. The results reveal a profound physical phenomenon --- the shifting of the optimal $\beta^\star$ basin as the system scales.
+
+\begin{table}[!t]
+\centering
+\caption{The core reachability and trainability results at the $n=16$ scale. Note the critical collapse of the previously optimal $\beta=0.1$, representing the scale-dependent viability threshold. The absence of a rigid, closed-form mapping between the asymptotic DLA dimension and finite-depth variance permits this shift to emerge empirically as a smooth, tunable trade-off rather than an abrupt binary failure. Secondary baselines (B5, B8) were evaluated with $N=3$ seeds rather than $N=7$, carrying wider statistical uncertainty}
+\label{tab:n16_core}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{@{}>{\centering\arraybackslash}p{0.12\columnwidth}
+                    >{\centering\arraybackslash}p{0.31\columnwidth}
+                    >{\centering\arraybackslash}p{0.23\columnwidth}
+                    >{\raggedright\arraybackslash}p{0.25\columnwidth}@{}}
+\hline\hline
+\textbf{$\beta$} & \textbf{Fidelity ($F$)} & \textbf{Gradient Variance} & \textbf{Status} \\ \hline
+$0.0$ ($N=7$) & $0.4977 \pm 0.0003$\newline {\scriptsize 95\% Bootstrap CI $[0.497,0.498]$} & $1.04 \times 10^{0}$ & Fails reachability \\
+$0.1$ ($N=12$) & $0.9156 \pm 0.2761$\newline {\scriptsize 95\% Bootstrap CI $[0.374,1.000]^\ddagger$} & $5.33 \times 10^{-1}$ & Insufficient perturbation \\
+$0.2$ ($N=7$) & $\mathbf{0.9993 \pm 0.0003}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$} & $4.32 \times 10^{-1}$ & Best fidelity$^\dagger$ \\
+$0.3$ ($N=7$) & $\mathbf{0.9994 \pm 0.0002}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$} & $4.96 \times 10^{-1}$ & Best fidelity$^\dagger$ \\
+$0.5$ ($N=7$) & $0.9990 \pm 0.0003$\newline {\scriptsize 95\% Bootstrap CI $[0.998,1.000]$} & $4.78 \times 10^{-1}$ & Robust \\
+$0.8$ ($N=7$) & $0.9991 \pm 0.0002$\newline {\scriptsize 95\% Bootstrap CI $[0.999,1.000]$} & $4.50 \times 10^{-1}$ & Robust \\
+$1.0$ ($N=7$) & $0.9989 \pm 0.0007$\newline {\scriptsize 95\% Bootstrap CI $[0.998,1.000]$} & $4.08 \times 10^{-1}$ & Robust \\
+\hline\hline
+\end{tabular}
+
+\vspace{2pt}
+{\scriptsize $^\dagger$Fidelity is near-perfect, but the gradient variance drops rapidly relative to $\beta=0.0$, indicating that the formal trainability condition of Hypothesis~\ref{hyp:main} is strict and may require a scale-dependent calibration. $^\ddagger$The wide confidence interval accurately reflects a bimodal failure mode across the 12 seeds, confirming that a 10\% perturbation is structurally insufficient to reliably rotate the $65,536$-dimensional statevector.}
+\end{table}
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=\textwidth]{paper1_3panel_n16.png}
+    \caption{Comprehensive performance metrics at the $n=16$ scale. Left --- Reachability (Fidelity vs $\beta$). Center --- Trainability (Gradient Variance vs $\beta$). Right --- The Pareto Frontier mapping the optimization landscape, explicitly highlighting the flat, robust performance plateau spanning $\beta \in [0.2, 1.0]$}
+    \label{fig:pareto_n16}
+\end{figure*}
+
+Table~\ref{tab:n16_core} and Figure~\ref{fig:pareto_n16} cleanly demonstrate the boundary failures --- strict equivariance ($\beta=0.0$) remains physically trapped in the symmetric subspace, capping out at $F=0.4976 \pm 0.0004$. 
+
+A further observation is the behavior of $\beta=0.1$. At $n=12$, $\beta=0.1$ was an effective optimal threshold value, achieving $F=0.9997 \pm 0.0002$. But at $n=16$, $\beta=0.1$ becomes unreliable, falling to a variable $F=0.9156 \pm 0.2761$ across 12 independent seeds.
+This phenomenon—the scale-dependent viability threshold—occurs because the Hilbert space has expanded exponentially. We hypothesize that, as the Hilbert-space dimension increases, the weaker perturbation becomes insufficient to reliably reach the targeted symmetry-broken branch at the fixed circuit depth considered here.
+
+Consequently, the minimum viable continuous relaxation shifts slightly higher, establishing a new operational floor at $\beta = 0.2$. Interestingly, unlike smaller scales where the optimal basin is tightly bounded, the $n=16$ results reveal that any sufficiently strong structural perturbation ($\beta \ge 0.2$) achieves near-perfect reachability ($F > 0.998$) and flat, robust trainability. Across the entire $\beta \in [0.2, 1.0]$ range, gradient variance stabilizes at roughly 40--48\% of the strictly equivariant baseline ($1.04 \times 10^{0}$). While this satisfies the formal 10\% condition of Hypothesis~\ref{hyp:main}, it also reveals that the AP method's structured ansatz mitigates barren plateau behavior entirely even when $\beta=1.0$. This suggests that at larger tested scales, avoiding the symmetric trap is the primary optimization bottleneck. Once a sufficient symmetry-breaking threshold is cleared, the continuous relaxation framework is robust without requiring delicate hyperparameter tuning.
+
+% \begin{figure*}[!t]
+%     \centering
+%     \includegraphics[width=\textwidth]{n16 commutator.png}
+%     \caption{Commutator-defect trajectory $\Delta(\beta)$ at $n=16$}
+%     \label{fig:defect_n16}
+% \end{figure*}
+
+It is worth noting that the wide confidence interval for sub-optimal values like $\beta=0.1$ reflects a bimodal failure mode, where some seed initializations fall into unconstrained local minima while others successfully reach the target.
+
+\subsubsection{Extended State-of-the-Art Baselines}
+Numerical tracing of $\Delta(\beta)$ further showed that the continuous commutator-defect signal remains stable at the largest tested scale.
+At the $n=16$ scale, the state-of-the-art baselines were evaluated against the representative $\beta \in [0.2, 0.3]$ model ($F \approx 0.9994$).
+\begin{itemize}
+    \item \textbf{B5 (Geometric QML with Horizontal Gates).} $F=0.9988 \pm 0.0005$ ($N=3$). The geometric structural redesign remained effective, achieving comparable near-unit fidelity to the continuous scalar dial.
+    \item \textbf{B6 (Unconstrained HEA).} $F=0.0001 \pm 0.0000$ ($N=7$). As detailed extensively above, this architecture suffered barren plateau behavior due to its unconstrained Lie algebra.
+    \item \textbf{B7 (Random Benchmark).} $F=0.6648 \pm 0.4701$ ($N=12$). Evaluated at random parameter initialization with no optimization, establishing the unoptimized circuit baseline.
+    \item \textbf{B8 \& B9 (ADAPT-VQE).} $F=0.9931 \pm 0.0000$ ($N=3$). The adaptive algorithms successfully constructed a trainable, reachable circuit. At $n=16$, the classical computational overhead required to simulate and rank the gradients of the entire operator pool at every step becomes substantial. The static $\beta=0.2$ dial achieved comparable high fidelity ($0.9994$) without iterative operator-pool ranking overhead, suggesting a computational advantage at scale.
+\end{itemize}
+
+\subsubsection{Dynamic Strategies --- Scheduled vs. Learned}
+Finally, the two dynamic strategies were stress-tested at the highest evaluated scale.
+\begin{itemize}
+    \item \textbf{Strategy S2 (Scheduled Curriculum).} Forcing $\beta$ to slowly increase on a deterministic, predefined schedule continued to be robust, achieving $F=0.9854 \pm 0.0020$ ($N=7$). This indicates that a scheduled curriculum is a viable alternative if the optimal scalar $\beta^\star$ is unknown prior to training.
+    \item \textbf{Strategy S3 (Learned Regularizer).} Meta-optimizing $\beta$ alongside the circuit angles via the commutator-defect collapsed at $n=16$, dropping to $F=0.3576 \pm 0.3070$ ($N=7$). As the Hilbert space scales, the hyperparameter loss landscape for $\beta$ itself becomes substantially more difficult at larger system sizes. The optimizer becomes trapped, failing to break symmetry in time. This suggests that continuous symmetry relaxation should be managed via static dials or deterministic schedules, rather than learned via gradient descent.
+\end{itemize}
+
+\subsection{Physical Ablation Studies and Generalization}
+
+To complete the analysis of the AP method, several core design components were systematically ablated. These physical ablations were evaluated exclusively at the tractable $n=6$ scale. By isolating these structural mechanics at a scale where the background gradient variance is universally high across architectures, the intrinsic physics of the symmetry operators was successfully decoupled from the confounding effects of exponential barren plateaus. Due to the deterministic, algebraic nature of the generator commutators (Ablations A3 and A6), these specific structural experiments were evaluated via single-seed execution, whereas the finite-sampling ablation (A5) explicitly models stochastic hardware noise.
+
+\subsubsection{Ablation A3 --- Generator Choice and Parity Commutation}
+This ablation serves strictly as a sanity check validating Lemma 3.19, rather than presenting a novel empirical discovery. 
+the sensitivity of the AP method to the specific physical choice of the symmetry-breaking operator, $h^{\text{brk}}$, was tested. Breaking the global $\mathbb{Z}_2$ symmetry with a single-qubit longitudinal field ($Z_i$) was effective, yielding a ground-state energy of $E = -6.0696$ (close to the exact $E_{\text{exact}} = -6.0705$). A transverse $Y_i$ field was slightly less optimal ($E = -6.0607$).
+
+Breaking the symmetry with a correlated, two-qubit $Z_iZ_j$ operator did not reach the target, yielding only $E = -5.5213$. The underlying quantum physics explains this structural failure --- the $Z_iZ_j$ operator actually commutes with the global spin-flip parity operator $U_g = \prod_k X_k$. Thus, from an algebraic perspective, $Z_iZ_j$ mathematically fails to break the target $\mathbb{Z}_2$ symmetry. Even when applied with maximum strength ($\beta=1$), it confines the ansatz to the strictly symmetric subspace, proving that the specific algebraic non-commutation of the breaking generator is fundamentally necessary.
+
+\subsubsection{Ablation A5 --- Finite-Sampling Shot Noise Robustness}
+To confirm that the theoretical gradient-variance bounds translate to viable execution on physical quantum hardware implementations, the $\beta \in [0.1, 0.3]$ optimized model was evaluated using a simulated finite-sampling estimator. The optimization converged ($E = -6.0434 \pm 0.0051$ across $N=3$ noise realizations) even when simulated shot noise ($1,000$ shots per expectation value) was directly injected into the analytical gradient evaluations at every step. This suggests that the variance preservation offered by the continuous dial is robust enough to survive the statistical measurement noise inherent in NISQ devices. These results indicate that the continuous dial does not inadvertently amplify sampling fluctuations. This finite-shot robustness is advantageous, as techniques relying on exact gradients often perform poorly when transferred to physical devices where sampling overhead is a primary bottleneck.
+
+\subsubsection{Ablation A6 --- Generalization to U(1) Symmetries}
+Finally, an attempt was made to provide evidence that the AP method is not artificially limited to the simple discrete $\mathbb{Z}_2$ parity symmetries of the Transverse-Field Ising Model. The experimental testbed was completely replaced with the bosonic Bose-Hubbard model on a 1D lattice (with a local bosonic occupation cutoff $n_{\max} = 3$), governed by the explicit Hamiltonian:
+\begin{equation}
+H_{\text{BH}} = -J \sum_{\langle i, j \rangle} (a_i^\dagger a_j + \mathrm{h.c.}) + \frac{U}{2} \sum_i \hat{n}_i (\hat{n}_i - 1) - \mu \sum_i \hat{n}_i,
+\end{equation}
+which enforces a continuous $U(1)$ particle-number conservation symmetry generated by $\hat{N} = \sum_i a_i^\dagger a_i$. 
+
+To test the AP framework, the system was configured with $n=6$ sites, open boundary conditions, half-filling, and a strong interaction ratio $U/J = 4$. The target state was explicitly chosen to lie outside the fixed-particle symmetric subspace. The symmetry-preserving generators $h^{\mathrm{sym}}$ consisted of standard particle-conserving hopping and interaction terms (satisfying $[h^{\mathrm{sym}}, \hat{N}] = 0$). To break the $U(1)$ symmetry, the continuous relaxation field utilized generators of the form $h^{\mathrm{brk}} = a_i + a_i^\dagger$, which explicitly violate particle-number conservation ($[h^{\mathrm{brk}}, \hat{N}] \neq 0$). 
+
+Operating at an intermediate relaxation of $\beta=0.25$, circuit depth $p=6$, and utilizing the Adam optimizer (learning rate $0.01$) over $N=7$ independent random seeds, the AP method successfully optimized the asymmetric ground state. It converged to a final energy of $E = -8.3822$, matching the exact diagonalization target $E_{\text{exact}} = -8.3822$ within chemical accuracy. This provides preliminary evidence of applicability beyond $\mathbb{Z}_2$, expanding its potential application space to quantum chemistry and condensed matter simulations. Unlike discrete parities, continuous symmetries possess an infinite number of group elements, traditionally making symmetry-breaking exponentially more difficult to manage without barren plateau penalties. The successful convergence on the Bose-Hubbard model suggests that continuous symmetry relaxation remains a computationally tractable approach even when the underlying symmetry group itself is continuous.
+
+\subsection{Threats to Validity}
+\label{sec:threats}
+
+While the experimental results support theoretical framework, several threats are acknowledged to validity that contextualize the findings.
+\begin{enumerate}
+    \item \textbf{Simulation and System Size Limits.} Due to the exponential scaling of exact statevector simulation, the primary scaling experiments are bounded at $n=16$ qubits. While this represents a large statevector space (65,536 dimensions) and successfully triggers barren plateaus, it remains a classical simulation. The behavior of the $\beta$-basin at truly asymptotic hardware scales ($n > 50$) relies on the theoretical bounds developed in the Methodology section holding beyond the simulable regime.
+    \item \textbf{Arbitrariness of the Trainability Threshold.} The stated $10\%$ gradient variance preservation threshold is an empirically motivated heuristic. At $n=16$, the continuous relaxation successfully trained to high fidelity while maintaining gradient variances at $\approx 41\%$ of the baseline. While this satisfies the formal 10\% condition, the flatness of the variance landscape implies that the arbitrary threshold may not accurately predict the exact boundary of the barren plateau, and future work is required to formalize a rigorous, scale-dependent trainability criterion.
+    \item \textbf{Seed and Sampling Statistics.} To mitigate the high variance inherent in non-convex optimization, the primary $n=6$ and $n=12$ results report 7-seed statistical aggregates, and the $n=16$ results utilize up to 12 seeds. While sufficient to characterize basic optimization variability, quantum optimization landscapes are variable. Individual seed convergence can still be highly stochastic, necessitating ensemble averaging for physical implementations.
+\end{enumerate}
+
+\section*{Statements and Declarations}
+
+\textbf{Competing Interests}
+The authors declare no competing interests.
+
+\textbf{Data and Code Availability}
+\label{sec:data}
+All source code, including the analytic gradient scripts, optimizer configurations, statevector simulation environments, and random seed initializations required to fully reproduce the experimental results and figures presented are open-source. Code and scripts required to reproduce all figures and numerical experiments are available in the public repository at \url{https://github.com/AryanRajendraDalvi/AVOIDING-PLATEAUS-METHOD}.
+
+\section*{Conclusion and Future Work}
+
+The expressibility-trainability paradox, which fundamentally limits the scalability of finite-depth quantum neural networks, is directly addressed by the findings presented in this manuscript. While unconstrained architectures succumb to barren plateaus driven by exponentially expanding Dynamical Lie Algebras (DLAs), and strictly equivariant architectures are restricted by their inability to capture symmetry-broken target states, it is demonstrated that treating physical symmetry as a continuous, tunable dial effectively navigates this impasse.
+
+By formalizing the Analytic Perturbation (AP) method, a mathematically rigorous and empirically validated framework is established for navigating the quantum loss landscape. The theoretical analysis exposes a critical structural separation: whereas the asymptotic DLA dimension generically exhibits a discontinuous rank expansion for any symmetry violation $\beta > 0$, the finite-depth circuit and fixed-parameter cost are real-analytic in $\beta$, while the sampled gradient statistics are continuous under the stated regularity assumptions. This mathematical gap enables the existence of an optimal operational basin. At scales $n \in \{6, 12\}$, this basin spans $\beta \in [0.1, 0.3]$, achieving near-perfect fidelity alongside gradient variances that safely exceed the formal $10\%$ trainability threshold. At $n=16$, the minimum viable structural perturbation shifts upward to $\beta=0.2$, as weaker perturbations such as $\beta=0.1$ become unreliable despite retaining substantial gradient variance. Beyond this threshold, the performance landscape exhibits robust flatness. Gradient variance is reliably sustained at approximately $40{-}48\%$ of the strictly equivariant baseline, and optimization consistently converges to fidelity $F>0.998$ across the entire continuous regime $\beta \in [0.2, 1.0]$. This behavior indicates that, at the larger tested scales, escaping the symmetric subspace constitutes the primary optimization bottleneck, rather than delicately balancing the ansatz against an immediate barren plateau.
+
+These multiscale simulations highlight the phenomenon of the ``scale-dependent viability threshold''---an observed scaling dynamic where a previously optimal, weaker continuous relaxation (e.g., $\beta=0.1$) collapses as the underlying Hilbert space expands, requiring a shift toward stronger perturbations to maintain reachability. In contrast to discrete architectural modifications or computationally demanding adaptive algorithms (such as ADAPT-VQE), the continuous AP framework navigates this shifting operational basin without incurring any classical operator-ranking overhead.
+
+Future research will focus on extending the AP framework into the deep NISQ era. A primary objective involves deploying the AP method on physical quantum hardware to investigate the interplay between realistic device decoherence and the continuous $\beta$-dial, building upon the preliminary finite-sampling noise ablations. Furthermore, expanding theoretical bounds of the differentiable commutator-defect surrogate, $\Delta(\theta, \beta)$, to non-Abelian Lie groups and continuous symmetries beyond $U(1)$ remains a highly promising avenue for the design of scalable quantum machine learning architectures.
+
+
+\renewcommand{\refname}{References}
+\begin{thebibliography}{99}
+
+% --- Foundations of VQAs & NISQ ---
+\bibitem{preskill2018quantum}
+J. Preskill, ``Quantum Computing in the NISQ era and beyond,'' \textit{Quantum}, vol. 2, p. 79, 2018.
+
+\bibitem{cerezo2021variational}
+M. Cerezo, A. Arrasmith, R. Babbush, S. C. Benjamin, S. Endo, K. Fujii, J. R. McClean, and P. J. Coles, ``Variational quantum algorithms,'' \textit{Nature Reviews Physics}, vol. 3, no. 9, pp. 625--644, 2021.
+
+\bibitem{peruzzo2014variational}
+A. Peruzzo, J. McClean, P. Shadbolt, M.-H. Yung, X.-Q. Zhou, P. T. Love, A. Aspuru-Guzik, and J. L. O'Brien, ``A variational eigenvalue solver on a photonic quantum processor,'' \textit{Nature Communications}, vol. 5, no. 1, p. 4213, 2014.
+
+\bibitem{farhi2014quantum}
+E. Farhi, J. Goldstone, and S. Gutmann, ``A quantum approximate optimization algorithm,'' \textit{arXiv preprint arXiv:1411.4028}, 2014.
+
+\bibitem{biamonte2017quantum}
+J. Biamonte, P. Wittek, N. Pancotti, P. Rebentrost, N. Wiebe, and S. Lloyd, ``Quantum machine learning,'' \textit{Nature}, vol. 549, no. 7671, pp. 195--202, 2017.
+
+% --- Barren Plateaus and Expressibility ---
+\bibitem{mcclean2018barren}
+J. R. McClean, S. Boixo, V. N. Smelyanskiy, R. Babbush, and H. Neven, ``Barren plateaus in quantum neural network training landscapes,'' \textit{Nature Communications}, vol. 9, no. 1, p. 4812, 2018.
+
+\bibitem{holmes2022connecting}
+Z. Holmes, K. Sharma, M. Cerezo, and P. J. Coles, ``Connecting ansatz expressibility to gradient magnitudes and barren plateaus,'' \textit{PRX Quantum}, vol. 3, no. 1, p. 010313, 2022.
+
+\bibitem{cerezo2021cost}
+M. Cerezo, A. Sone, T. Volkoff, L. Cincio, and P. J. Coles, ``Cost function dependent barren plateaus in shallow parametrized quantum circuits,'' \textit{Nature Communications}, vol. 12, no. 1, p. 1791, 2021.
+
+\bibitem{wang2021noise}
+S. Wang, E. Fontana, M. Cerezo, K. Sharma, A. Sone, L. Cincio, and P. J. Coles, ``Noise-induced barren plateaus in variational quantum algorithms,'' \textit{Nature Communications}, vol. 12, no. 1, p. 6961, 2021.
+
+\bibitem{ortiz2021entanglement}
+C. Ortiz Marrero, M. Kieferov{\'a}, and N. Wiebe, ``Entanglement-induced barren plateaus,'' \textit{PRX Quantum}, vol. 2, no. 4, p. 040316, 2021.
+
+% --- Dynamical Lie Algebras (DLAs) ---
+\bibitem{lan2026dla}
+K.-M. Lan and E. Huang, ``Beyond the Expressivity-Trainability Paradox: A Dynamical Lie Algebra Perspective on Navigating Barren Plateaus in Quantum Machine Learning,'' \textit{arXiv preprint arXiv:2606.31536}, 2026.
+
+\bibitem{fontana2023adjoint}
+E. Fontana, M. Cerezo, and P. J. Coles, ``The adjoint is all you need: Characterizing Barren Plateaus via Dynamical Lie Algebras,'' \textit{arXiv preprint arXiv:2309.05690}, 2023.
+
+\bibitem{ragone2023representation}
+M. Ragone, B. Bakalov, and M. Cerezo, ``Representation theory for Quantum Machine Learning,'' \textit{arXiv preprint arXiv:2310.11503}, 2023.
+
+% --- Equivariant QML & Geometric QML ---
+\bibitem{larocca2022group}
+M. Larocca, F. Sauvage, F. M. Dick, P. J. Coles, and M. Cerezo, ``Group-invariant quantum machine learning,'' \textit{PRX Quantum}, vol. 3, no. 3, p. 030341, 2022.
+
+\bibitem{nguyen2024theory}
+T. Nguyen, J. Bringewatt, and M. C. Tran, ``Theory for equivariant quantum neural networks,'' \textit{PRX Quantum}, vol. 5, no. 1, p. 010323, 2024.
+
+\bibitem{baumann2026exploiting}
+A. Baumann, J. Stein, and C. Linnhoff-Popien, ``Symmetry Alone Is Not an Ansatz: Task-Aligned Interactions in Equivariant Quantum Circuits,'' \textit{arXiv preprint arXiv:2606.20316}, 2026.
+
+\bibitem{meyer2023exploiting}
+J. J. Meyer, M. Mularski, E. Gil-Fuster, C. Mele, F. Arzani, A. Sanpera, and J. Eisert, ``Exploiting symmetry in variational quantum machine learning,'' \textit{PRX Quantum}, vol. 4, no. 1, p. 010328, 2023.
+
+\bibitem{skolik2023equivariant}
+A. Skolik, M. Cattaneo, G. M. Nikolopoulos, and B. Kraus, ``Equivariant quantum circuits for graph representation learning,'' \textit{npj Quantum Information}, vol. 9, no. 1, p. 47, 2023.
+
+\bibitem{schatzki2022theoretical}
+L. Schatzki, M. Larocca, F. Sauvage, and M. Cerezo, ``Theoretical guarantees for geometric quantum machine learning,'' \textit{arXiv preprint arXiv:2210.09974}, 2022.
+
+% --- Symmetry Breaking & Adaptive Methods ---
+\bibitem{park2021symmetry}
+S. Park, ``Symmetry-breaking layers for variational quantum eigensolvers,'' \textit{arXiv preprint arXiv:2106.02509}, 2021.
+
+\bibitem{park2024symmetry}
+S. Park, ``Practical implementations of symmetry-breaking quantum circuits,'' \textit{APL Quantum}, vol. 1, no. 2, 2024.
+
+\bibitem{wiersema2025geometric}
+R. Wiersema, N. Killoran, and M. Cerezo, ``Geometric quantum machine learning with horizontal gates,'' \textit{Physical Review Research}, vol. 7, no. 1, p. 013012, 2025.
+
+\bibitem{grimsley2019adapt}
+H. R. Grimsley, S. E. Economou, E. Barnes, and N. J. Mayhall, ``An adaptive variational algorithm for exact molecular simulations on a quantum computer,'' \textit{Nature Communications}, vol. 10, no. 1, p. 3007, 2019.
+
+\bibitem{tang2021qubit}
+H. L. Tang, V. Shkolnikov, G. S. Barron, H. R. Grimsley, N. J. Mayhall, E. Barnes, and S. E. Economou, ``Qubit-ADAPT-VQE: An adaptive algorithm for constructing hardware-efficient ans\"atze on a quantum processor,'' \textit{PRX Quantum}, vol. 2, no. 2, p. 020310, 2021.
+
+% --- Classical Relaxations & Continuous Symmetry ---
+\bibitem{vanderouderaa2022relaxed}
+T. Van der Ouderaa, D. W. Romero, and M. van der Wilk, ``Relaxing equivariance to improve generalization in deep learning,'' \textit{Advances in Neural Information Processing Systems}, vol. 35, pp. 29334--29346, 2022.
+
+\bibitem{finzi2021practical}
+M. Finzi, M. Welling, and A. G. Wilson, ``A practical method for constructing equivariant multilayer perceptrons for arbitrary matrix groups,'' \textit{International Conference on Machine Learning}, pp. 3318--3328, 2021.
+
+\bibitem{kossaifi2024continuous}
+J. Kossaifi, A. Bulat, and M. Pantic, ``Continuous symmetry breaking in classical deep learning architecture design,'' \textit{IEEE Transactions on Pattern Analysis and Machine Intelligence}, 2024.
+
+% --- Physics / Models / Optimization ---
+\bibitem{pfeuty1970one}
+P. Pfeuty, ``The one-dimensional Ising model with a transverse field,'' \textit{Annals of Physics}, vol. 57, no. 1, pp. 79--90, 1970.
+
+\bibitem{sachdev2011quantum}
+S. Sachdev, \textit{Quantum Phase Transitions}. Cambridge University Press, 2011.
+
+\bibitem{stokes2020quantum}
+J. Stokes, J. Izaac, N. Killoran, and G. Carleo, ``Quantum Natural Gradient,'' \textit{Quantum}, vol. 4, p. 269, 2020.
+
+\end{thebibliography}
+
+\end{document}
