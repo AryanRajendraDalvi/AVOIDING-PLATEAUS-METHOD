@@ -253,8 +253,7 @@ The learned objective in \eqref{eq:12} follows the classical relaxed-equivarianc
 \footnotesize
 \setlength{\tabcolsep}{2pt}
 \renewcommand{\arraystretch}{1.12}
-\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}X
-    *{3}{>{\centering\arraybackslash}p{0.19\columnwidth}}@{}}
+\begin{tabular}{@{}lccc@{}}
 \toprule
 \textbf{Setting} & $\mathbf{n=6}$ & $\mathbf{n=12}$ & $\mathbf{n=16}$ \\
 \midrule
@@ -273,7 +272,7 @@ Number of seeds & $7$ & $7$ & $7/12$ \\
 Simulator & Statevector & Statevector & Statevector \\
 Precision & float64 & float64 & float64 \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
 In this section, an empirical test is conducted on Hypothesis~\ref{hyp:main}. First, the physical testbed, the benchmark baselines, the experimental protocol, and the decision criteria are defined. Then, the multi-scale evaluation results are presented at $n \in \{6, 12, 16\}$ qubits to determine whether a non-trivial, optimal relaxation level $\beta^\star$ exists.
@@ -421,19 +420,19 @@ The central trade-off between reachability (measured via ground state Fidelity) 
 \hline\hline
 \textbf{Model/$\beta$} & \textbf{Fidelity ($F$)} & \textbf{Grad Variance} & \textbf{Status} \\ \hline
 \multicolumn{4}{c}{\textbf{Proposed Method (AP)}} \\ \hline
-$0.0$ & $0.5068 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[0.507,0.507]$} & $1.57 \times 10^0$ & Fails reachability \\
-$0.1$ & $0.9981 \pm 0.0041$\newline {\scriptsize 95\% Bootstrap CI $[0.995, 1.000]$} & $1.12 \times 10^0$ & Confirmed \\
-$0.2$ & $0.9998 \pm 0.0001$\newline {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$} & $8.93 \times 10^{-1}$ & Confirmed \\
-$0.3$ & $\mathbf{0.9999 \pm 0.0000}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$} & $\mathbf{8.63 \times 10^{-1}}$ & \textbf{Robust} \\
-$1.0$ & $0.8573 \pm 0.3486$\newline {\scriptsize 95\% Bootstrap CI $[0.599, 1.000]^\ddagger$} & $6.92 \times 10^{-1}$ & Asymptotic danger \\
+$0.0$ & \begin{tabular}{@{}c@{}}$0.5068 \pm 0.0000$ \\  {\scriptsize 95\% Bootstrap CI $[0.507,0.507]$}\end{tabular} & $1.57 \times 10^0$ & Fails reachability \\
+$0.1$ & \begin{tabular}{@{}c@{}}$0.9981 \pm 0.0041$ \\  {\scriptsize 95\% Bootstrap CI $[0.995, 1.000]$}\end{tabular} & $1.12 \times 10^0$ & Confirmed \\
+$0.2$ & \begin{tabular}{@{}c@{}}$0.9998 \pm 0.0001$ \\  {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$}\end{tabular} & $8.93 \times 10^{-1}$ & Confirmed \\
+$0.3$ & \begin{tabular}{@{}c@{}}$\mathbf{0.9999 \pm 0.0000}$ \\  {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$}\end{tabular} & $\mathbf{8.63 \times 10^{-1}}$ & \textbf{Robust} \\
+$1.0$ & \begin{tabular}{@{}c@{}}$0.8573 \pm 0.3486$ \\  {\scriptsize 95\% Bootstrap CI $[0.599, 1.000]^\ddagger$}\end{tabular} & $6.92 \times 10^{-1}$ & Asymptotic danger \\
 \hline
 \multicolumn{4}{c}{\textbf{Baselines \& Ablations}} \\ \hline
-B3 (Fixed) & $0.6465 \pm 0.2234$\newline {\scriptsize 95\% Bootstrap CI $[0.481,0.812]$} & -- & Suboptimal \\
-B5 (Geo) & $0.9999 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$} & -- & Geometric baseline \\
-B6 (HEA) & $0.9999 \pm 0.0001$\newline {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$} & -- & Unconstrained \\
-  B7 (Random) & $0.8564 \pm 0.3490$\newline {\scriptsize 95\% Bootstrap CI $[0.598,1.000]^\ddagger$} & -- & Random initialization \\
-B8 (ADAPT) & $0.9950 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[0.995,0.995]$} & -- & Costly gradient pool \\
-A1 (Layer $\beta$) & $0.7733 \pm 0.0946$\newline {\scriptsize 95\% Bootstrap CI $[0.703,0.843]$} & -- & Fails reachability \\
+B3 (Fixed) & \begin{tabular}{@{}c@{}}$0.6465 \pm 0.2234$ \\  {\scriptsize 95\% Bootstrap CI $[0.481,0.812]$}\end{tabular} & -- & Suboptimal \\
+B5 (Geo) & \begin{tabular}{@{}c@{}}$0.9999 \pm 0.0000$ \\  {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$}\end{tabular} & -- & Geometric baseline \\
+B6 (HEA) & \begin{tabular}{@{}c@{}}$0.9999 \pm 0.0001$ \\  {\scriptsize 95\% Bootstrap CI $[1.000,1.000]$}\end{tabular} & -- & Unconstrained \\
+  B7 (Random) & \begin{tabular}{@{}c@{}}$0.8564 \pm 0.3490$ \\  {\scriptsize 95\% Bootstrap CI $[0.598,1.000]^\ddagger$}\end{tabular} & -- & Random initialization \\
+B8 (ADAPT) & \begin{tabular}{@{}c@{}}$0.9950 \pm 0.0000$ \\  {\scriptsize 95\% Bootstrap CI $[0.995,0.995]$}\end{tabular} & -- & Costly gradient pool \\
+A1 (Layer $\beta$) & \begin{tabular}{@{}c@{}}$0.7733 \pm 0.0946$ \\  {\scriptsize 95\% Bootstrap CI $[0.703,0.843]$}\end{tabular} & -- & Fails reachability \\
 \hline\hline
 
 \end{tabular}
@@ -448,7 +447,7 @@ A1 (Layer $\beta$) & $0.7733 \pm 0.0946$\newline {\scriptsize 95\% Bootstrap CI 
 
 \begin{figure*}[!t]
     \centering
-    \includegraphics[width=0.5\textwidth]{n6 pareto.png}
+    \includegraphics[width=0.5\textwidth]{n6_pareto.png}
     \caption{The Reachability-Trainability Pareto Frontier at $n=6$. The optimal continuous relaxation $\beta^\star = 0.3$ balances the competing demands, occupying the empirical Pareto optimum in the top-right quadrant}
     \label{fig:pareto_n6}
 \end{figure*}
@@ -476,16 +475,14 @@ To establish a rigorous baseline hierarchy at the $n=6$ scale, five state-of-the
 \footnotesize
 \setlength{\tabcolsep}{2pt}
 \renewcommand{\arraystretch}{1.12}
-\begin{tabularx}{\columnwidth}{@{}>{\raggedright\arraybackslash}p{0.27\columnwidth}
-    >{\centering\arraybackslash}p{0.22\columnwidth}
-    >{\centering\arraybackslash}X@{}}
+\begin{tabular}{@{}lcc@{}}
 \toprule
 \textbf{Method} & \textbf{Auxiliary circuits} & \textbf{Relative evaluation count} \\
 \midrule
 AP (Static $\beta$) & $0$ & $1\times$ \\
 \mbox{ADAPT-VQE} & $\mathcal{O}(N_g)$ & $\approx 150\times$ \\
 \bottomrule
-\end{tabularx}
+\end{tabular}
 \end{table}
 
 
@@ -533,19 +530,19 @@ The central trade-off between reachability (Fidelity) and trainability (Gradient
 \hline\hline
 \textbf{Model/$\beta$} & \textbf{Fidelity ($F$)} & \textbf{Grad Variance} & \textbf{Status} \\ \hline
 \multicolumn{4}{c}{\textbf{Proposed Method (AP)}} \\ \hline
-$0.0$ & $0.4980 \pm 0.0001$\newline {\scriptsize 95\% Bootstrap CI $[0.498,0.498]$} & $1.12 \times 10^0$ & Fails reachability \\
-$0.1$ & $\mathbf{0.9995 \pm 0.0004}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$} & $\mathbf{6.86 \times 10^{-1}}$ & \textbf{Robust} \\
-$0.2$ & $\mathbf{0.9997 \pm 0.0001}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$} & $\mathbf{6.40 \times 10^{-1}}$ & \textbf{Robust} \\
-$0.3$ & $\mathbf{0.9997 \pm 0.0001}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$} & $\mathbf{6.38 \times 10^{-1}}$ & \textbf{Robust} \\
-$1.0$ & $0.7139 \pm 0.4515$\newline {\scriptsize 95\% Bootstrap CI $[0.379, 1.000]^\ddagger$} & $5.35 \times 10^{-1}$ & Fails (local minima) \\
+$0.0$ & \begin{tabular}{@{}c@{}}$0.4980 \pm 0.0001$ \\  {\scriptsize 95\% Bootstrap CI $[0.498,0.498]$}\end{tabular} & $1.12 \times 10^0$ & Fails reachability \\
+$0.1$ & \begin{tabular}{@{}c@{}}$\mathbf{0.9995 \pm 0.0004}$ \\  {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$}\end{tabular} & $\mathbf{6.86 \times 10^{-1}}$ & \textbf{Robust} \\
+$0.2$ & \begin{tabular}{@{}c@{}}$\mathbf{0.9997 \pm 0.0001}$ \\  {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$}\end{tabular} & $\mathbf{6.40 \times 10^{-1}}$ & \textbf{Robust} \\
+$0.3$ & \begin{tabular}{@{}c@{}}$\mathbf{0.9997 \pm 0.0001}$ \\  {\scriptsize 95\% Bootstrap CI $[\mathbf{1.000,1.000}]$}\end{tabular} & $\mathbf{6.38 \times 10^{-1}}$ & \textbf{Robust} \\
+$1.0$ & \begin{tabular}{@{}c@{}}$0.7139 \pm 0.4515$ \\  {\scriptsize 95\% Bootstrap CI $[0.379, 1.000]^\ddagger$}\end{tabular} & $5.35 \times 10^{-1}$ & Fails (local minima) \\
 \hline
 \multicolumn{4}{c}{\textbf{Baselines \& Ablations}} \\ \hline
-B3 (Fixed) & $0.7135 \pm 0.3640$\newline {\scriptsize 95\% Bootstrap CI $[0.444,0.983]$} & -- & Suboptimal \\
-B5 (Geo) & $0.9993 \pm 0.0003$\newline {\scriptsize 95\% Bootstrap CI $[0.999,0.999]$} & -- & Geometric baseline \\
-B6 (HEA) & $0.1197 \pm 0.0142$\newline {\scriptsize 95\% Bootstrap CI $[0.109,0.130]$} & -- & Barren plateau collapse \\
-  B7 (Random) & $0.5711 \pm 0.4945$\newline {\scriptsize 95\% Bootstrap CI $[0.205,0.938]$} & -- & Random initialization \\
-B8 (ADAPT) & $0.9939 \pm 0.0000$\newline {\scriptsize 95\% Bootstrap CI $[0.994,0.994]$} & -- & Costly gradient pool \\
-A1 (Layer $\beta$) & $0.0686 \pm 0.0820$\newline {\scriptsize 95\% Bootstrap CI $[0.008,0.129]$} & -- & Barren plateau collapse \\
+B3 (Fixed) & \begin{tabular}{@{}c@{}}$0.7135 \pm 0.3640$ \\  {\scriptsize 95\% Bootstrap CI $[0.444,0.983]$}\end{tabular} & -- & Suboptimal \\
+B5 (Geo) & \begin{tabular}{@{}c@{}}$0.9993 \pm 0.0003$ \\  {\scriptsize 95\% Bootstrap CI $[0.999,0.999]$}\end{tabular} & -- & Geometric baseline \\
+B6 (HEA) & \begin{tabular}{@{}c@{}}$0.1197 \pm 0.0142$ \\  {\scriptsize 95\% Bootstrap CI $[0.109,0.130]$}\end{tabular} & -- & Barren plateau collapse \\
+  B7 (Random) & \begin{tabular}{@{}c@{}}$0.5711 \pm 0.4945$ \\  {\scriptsize 95\% Bootstrap CI $[0.205,0.938]$}\end{tabular} & -- & Random initialization \\
+B8 (ADAPT) & \begin{tabular}{@{}c@{}}$0.9939 \pm 0.0000$ \\  {\scriptsize 95\% Bootstrap CI $[0.994,0.994]$}\end{tabular} & -- & Costly gradient pool \\
+A1 (Layer $\beta$) & \begin{tabular}{@{}c@{}}$0.0686 \pm 0.0820$ \\  {\scriptsize 95\% Bootstrap CI $[0.008,0.129]$}\end{tabular} & -- & Barren plateau collapse \\
 \hline\hline
 
 \end{tabular}
@@ -627,19 +624,16 @@ The central reachability-trainability trade-off at $n=16$. The results reveal a 
 \footnotesize
 \setlength{\tabcolsep}{2pt}
 \renewcommand{\arraystretch}{1.12}
-\begin{tabular}{@{}>{\centering\arraybackslash}p{0.12\columnwidth}
-                    >{\centering\arraybackslash}p{0.31\columnwidth}
-                    >{\centering\arraybackslash}p{0.23\columnwidth}
-                    >{\raggedright\arraybackslash}p{0.25\columnwidth}@{}}
+\begin{tabular}{@{}lccc@{}}
 \hline\hline
 \textbf{$\beta$} & \textbf{Fidelity ($F$)} & \textbf{Gradient Variance} & \textbf{Status} \\ \hline
-$0.0$ ($N=7$) & $0.4977 \pm 0.0003$\newline {\scriptsize 95\% Bootstrap CI $[0.497,0.498]$} & $1.04 \times 10^{0}$ & Fails reachability \\
-$0.1$ ($N=12$) & $0.9156 \pm 0.2761$\newline {\scriptsize 95\% Bootstrap CI $[0.374,1.000]^\ddagger$} & $5.33 \times 10^{-1}$ & Insufficient perturbation \\
-$0.2$ ($N=7$) & $\mathbf{0.9993 \pm 0.0003}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$} & $4.32 \times 10^{-1}$ & Best fidelity$^\dagger$ \\
-$0.3$ ($N=7$) & $\mathbf{0.9994 \pm 0.0002}$\newline {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$} & $4.96 \times 10^{-1}$ & Best fidelity$^\dagger$ \\
-$0.5$ ($N=7$) & $0.9990 \pm 0.0003$\newline {\scriptsize 95\% Bootstrap CI $[0.998,1.000]$} & $4.78 \times 10^{-1}$ & Robust \\
-$0.8$ ($N=7$) & $0.9991 \pm 0.0002$\newline {\scriptsize 95\% Bootstrap CI $[0.999,1.000]$} & $4.50 \times 10^{-1}$ & Robust \\
-$1.0$ ($N=7$) & $0.9989 \pm 0.0007$\newline {\scriptsize 95\% Bootstrap CI $[0.998,1.000]$} & $4.08 \times 10^{-1}$ & Robust \\
+$0.0$ ($N=7$) & \begin{tabular}{@{}c@{}}$0.4977 \pm 0.0003$ \\  {\scriptsize 95\% Bootstrap CI $[0.497,0.498]$}\end{tabular} & $1.04 \times 10^{0}$ & Fails reachability \\
+$0.1$ ($N=12$) & \begin{tabular}{@{}c@{}}$0.9156 \pm 0.2761$ \\  {\scriptsize 95\% Bootstrap CI $[0.374,1.000]^\ddagger$}\end{tabular} & $5.33 \times 10^{-1}$ & Insufficient perturbation \\
+$0.2$ ($N=7$) & \begin{tabular}{@{}c@{}}$\mathbf{0.9993 \pm 0.0003}$ \\  {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$}\end{tabular} & $4.32 \times 10^{-1}$ & Best fidelity$^\dagger$ \\
+$0.3$ ($N=7$) & \begin{tabular}{@{}c@{}}$\mathbf{0.9994 \pm 0.0002}$ \\  {\scriptsize 95\% Bootstrap CI $[\mathbf{0.999,1.000}]$}\end{tabular} & $4.96 \times 10^{-1}$ & Best fidelity$^\dagger$ \\
+$0.5$ ($N=7$) & \begin{tabular}{@{}c@{}}$0.9990 \pm 0.0003$ \\  {\scriptsize 95\% Bootstrap CI $[0.998,1.000]$}\end{tabular} & $4.78 \times 10^{-1}$ & Robust \\
+$0.8$ ($N=7$) & \begin{tabular}{@{}c@{}}$0.9991 \pm 0.0002$ \\  {\scriptsize 95\% Bootstrap CI $[0.999,1.000]$}\end{tabular} & $4.50 \times 10^{-1}$ & Robust \\
+$1.0$ ($N=7$) & \begin{tabular}{@{}c@{}}$0.9989 \pm 0.0007$ \\  {\scriptsize 95\% Bootstrap CI $[0.998,1.000]$}\end{tabular} & $4.08 \times 10^{-1}$ & Robust \\
 \hline\hline
 \end{tabular}
 
