@@ -1,4 +1,5 @@
-\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}% Math and Physical Sciences Numbered Reference Style
+\documentclass[pdflatex,sn-mathphys-num]{sn-jnl}
+\geometry{textheight=240mm, bottom=25mm}% Math and Physical Sciences Numbered Reference Style
 
 \usepackage{graphicx}
 \usepackage{multirow}
@@ -37,17 +38,19 @@
 \newcommand{\opnorm}[1]{\left\lVert #1 \right\rVert_{\mathrm{op}}}
 \newcommand{\fronorm}[1]{\left\lVert #1 \right\rVert_{F}}
 
-\raggedbottom
+\flushbottom
 
 \begin{document}
 
 \title[Avoiding Plateaus]{Avoiding Plateaus: The Analytic Perturbation (AP) Method for Quantum Neural Networks}
 
-\author*[1]{\fnm{Aryan Rajendra} \sur{Dalvi}}\email{email1@example.com}
-\author[1]{\fnm{Author 2} \sur{Name}}\email{email2@example.com}
-\author[1]{\fnm{Author 3} \sur{Name}}\email{email3@example.com}
+\author*[1]{\fnm{Dr.Himani S.} \sur{Deshpande}}\email{himani.desphande@thadomal.org}
+\author[2]{\fnm{Aryan Rajendra} \sur{Dalvi}}\email{aryanrdalvi111@gmail.com}
+\author[3]{\fnm{Dhruv} \sur{Dhandukiya}}\email{dhruvdhandukiya@gmail.com}
 
-\affil*[1]{\orgdiv{Department}, \orgname{Institute Name}, \orgaddress{\city{City}, \country{Country}}}
+\affil*[1]{\orgdiv{Assistant Professor}, \orgname{Thadomal Shahani Engineering College}, \orgaddress{\city{Mumbai}, \country{India}}}
+\affil[2]{\orgname{Thadomal Shahani Engineering College}, \orgaddress{\city{Mumbai}, \country{India}}}
+\affil[3]{\orgname{Thadomal Shahani Engineering College}, \orgaddress{\city{Mumbai}, \country{India}}}
 
 \abstract{A fundamental obstacle in quantum neural networks (QNNs) involves the inherent conflict between model expressiveness and optimization feasibility. Highly expressive architectures, exemplified by the hardware-efficient ansatz, encounter the challenge of barren plateaus (characterized by exponentially diminishing gradients) stemming from unrestricted dynamical Lie algebras (DLAs). Conversely, rigorously equivariant designs preserve gradient stability by restricting operations to symmetry-respecting commutants, but they lack the capacity to represent symmetry-broken target states. To resolve this fundamental tension, the Analytic Perturbation (AP) method is proposed as a systematic framework enabling controlled, incremental symmetry relaxation. The AP method employs an adjustable interpolation coefficient, $\beta \in [0, 1]$, to smoothly integrate symmetry-preserving and symmetry-violating generators. Theoretical analysis demonstrates that although the limiting DLA dimension typically exhibits discontinuous rank growth, the finite-depth circuit varies analytically with respect to $\beta$, and the observed gradient statistics maintain continuity. Numerical statevector simulations of the Transverse-Field Ising Model at scales extending to $16$ qubits reveal a critical minimal structural perturbation that varies as a function of system size. Notably, at $n=16$, modest symmetry breaking ($\beta=0.1$) proves unreliable despite preserving considerable gradient variance, while performance becomes robust across the extended interval $\beta \in [0.2, 1.0]$. This observation indicates that effective scaling necessitates surpassing a particular symmetry-breaking threshold rather than optimizing a hyperparameter within a constrained interval. In conclusion, these results establish the AP method as a theoretically motivated strategy for optimizing finite-depth quantum circuits, while deferring the rigorous establishment of a scale-dependent trainability criterion to subsequent research endeavors.}
 
