@@ -709,15 +709,6 @@ While the experimental results support theoretical framework, several threats ar
     \item \textbf{Seed and Sampling Statistics.} To mitigate the high variance inherent in non-convex optimization, the primary $n=6$ and $n=12$ results report 7-seed statistical aggregates, and the $n=16$ results utilize up to 12 seeds. While sufficient to characterize basic optimization variability, quantum optimization landscapes are variable. Individual seed convergence can still be highly stochastic, necessitating ensemble averaging for physical implementations.
 \end{enumerate}
 
-\section*{Statements and Declarations}
-
-\textbf{Competing Interests}
-The authors declare no competing interests.
-
-\textbf{Data and Code Availability}
-\label{sec:data}
-All source code, including the analytic gradient scripts, optimizer configurations, statevector simulation environments, and random seed initializations required to fully reproduce the experimental results and figures presented are open-source. Code and scripts required to reproduce all figures and numerical experiments are available in the public repository at \url{https://github.com/AryanRajendraDalvi/AVOIDING-PLATEAUS-METHOD}.
-
 \section*{Conclusion and Future Work}
 
 The expressibility-trainability paradox, which fundamentally limits the scalability of finite-depth quantum neural networks, is directly addressed by the findings presented in this manuscript. While unconstrained architectures succumb to barren plateaus driven by exponentially expanding Dynamical Lie Algebras (DLAs), and strictly equivariant architectures are restricted by their inability to capture symmetry-broken target states, it is demonstrated that treating physical symmetry as a continuous, tunable dial effectively navigates this impasse.
@@ -728,6 +719,22 @@ These multiscale simulations highlight the phenomenon of the ``scale-dependent v
 
 Future research will focus on extending the AP framework into the deep NISQ era. A primary objective involves deploying the AP method on physical quantum hardware to investigate the interplay between realistic device decoherence and the continuous $\beta$-dial, building upon the preliminary finite-sampling noise ablations. Furthermore, expanding theoretical bounds of the differentiable commutator-defect surrogate, $\Delta(\theta, \beta)$, to non-Abelian Lie groups and continuous symmetries beyond $U(1)$ remains a highly promising avenue for the design of scalable quantum machine learning architectures.
 
+
+
+
+\section*{Statements and Declarations}
+
+\textbf{Competing interests:} The authors declare that they have no competing financial or personal interests that could have influenced the work described in this paper.
+
+\textbf{Funding:} Not available.
+
+\textbf{Author contributions:} All authors contributed equally.
+
+\textbf{Acknowledgements:} Not available.
+
+\textbf{Data and Code Availability:}
+\label{sec:data}
+All source code, including the analytic gradient scripts, optimizer configurations, statevector simulation environments, and random seed initializations required to fully reproduce the experimental results and figures presented are open-source. Code and scripts required to reproduce all figures and numerical experiments are available in the public repository at \url{https://github.com/AryanRajendraDalvi/AVOIDING-PLATEAUS-METHOD}.
 
 \renewcommand{\refname}{References}
 \begin{thebibliography}{99}
