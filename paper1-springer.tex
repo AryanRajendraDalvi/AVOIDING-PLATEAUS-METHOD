@@ -382,7 +382,7 @@ Statevector simulations are executed across varying system sizes to decouple exa
 % ---------------------------------------------------------
 % THE MULTI-SCALE RESULTS SECTION GOES HERE
 % ---------------------------------------------------------
-\subsection{Small-Scale Evaluation ($n=6$)}
+\subsection{Small-Scale Evaluation (\texorpdfstring{$n=6$}{n=6})}
 
 The full experimental protocol was first executed at the $n=6$ scale, corresponding to a $64$-dimensional statevector simulation. At this foundational depth, the asymptotic scaling laws that drive barren plateaus have not yet fully activated to suppress the gradients of unconstrained models. Therefore, the $n=6$ scale serves a distinct and vital scientific purpose --- it isolates the purely structural and mathematical expressibility of the various ans\"atze. By decoupling the physics of symmetry operators from the confounding effects of gradient collapse, this scale allows the establishment of the empirical limits of reachability for each ansatz family. The target ground state for the symmetry-broken ordered phase ($h=0.5, h_z=0.1$) was computed via exact diagonalization, yielding an exact global minimum energy of $E_{\text{exact}} = -6.0705$.
 
@@ -484,7 +484,7 @@ AP (Static $\beta$) & $0$ & $1\times$ \\
 
 
 
-\subsection{Intermediate Scale-Up ($n=12$)}
+\subsection{Intermediate Scale-Up (\texorpdfstring{$n=12$}{n=12})}
 
 Scaling the experimental testbed to a $4,096$-dimensional statevector ($n=12$) provides an intermediate-scale regime in which gradient suppression becomes clearly observable for the tested unconstrained architecture. This intermediate scale systematically tests the core trainability claims of Hypothesis~\ref{hyp:main}, separating ans\"atze that merely benefit from small-system expressivity from those with retain favorable trainability trends at the largest simulated scales.
 
@@ -592,7 +592,7 @@ Finally, the two dynamic control strategies were evaluated at $n=12$, with the l
 
 
 
-\subsection{Scaling ($n=16$)}
+\subsection{Scaling (\texorpdfstring{$n=16$}{n=16})}
 \label{sec:n16}
 
 The experimental testbed was finally scaled to $n=16$ qubits, simulating a large $65,536$-dimensional statevector. This represents the largest system size studied, pushing deeply into the asymptotic limit where barren plateaus are fully activated and gradient scaling dominates all other optimization factors. At this scale, the difference between theoretical expressivity and practical trainability is substantial. This section documents the evaluation of the hypotheses at scale, highlighting the dynamic shifting of the optimal symmetry-relaxation basin.
